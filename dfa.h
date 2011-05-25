@@ -12,4 +12,10 @@ extern struct set *move(struct set *, int state);
 
 typedef int ROW[MAX_CHARS];
 
+struct dfa {
+	int group;
+	struct set *states;	/* nfa states */
+	int accept;
+};
+
 #endif	/* dfa.h */

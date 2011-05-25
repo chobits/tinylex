@@ -7,20 +7,21 @@
 
 /* dfa sets auxiliary function */
 static int currentdfa, ndfas;
-static struct set **dfastates = NULL;
+static struct dfa *dfastates = NULL;
 
 static void free_dfas(void)
 {
 	int i;
 	for (i = 0; i < ndfas; i++)
-		delset(dfastates[i]);
+		delset(dfastates[i].states);
+	free(dfastates);
 }
 
 static void init_dfas(struct nfa *sstate, struct set *acceptset)
 {
 	struct set *first;
 	int i, accept;
-	dfastates = xmalloc(MAX_DFAS * sizeof(struct set *));
+	dfastates = xmalloc(MAX_DFAS * sizeof(struct dfa));
 	/*
 	 * init first dfa state
 	 * NOTE: First NFA cannot be accepted,
@@ -29,58 +30,71 @@ static void init_dfas(struct nfa *sstate, struct set *acceptset)
 	first = newset();
 	addset(first, nfastate(sstate));
 	epsilon_closure(first, &accept, 0);
-	dfastates[0] = first;
+	dfastates[0].states = first;
 	if (accept >= 0) {
 		addset(acceptset, 0);
+		dfastates[0].accept = accept;
 	}
 
 	/* others */
-	for (i = 1; i < MAX_DFAS; i++)
-		dfastates[i] = NULL;
+	for (i = 1; i < MAX_DFAS; i++) {
+		dfastates[i].group = 0;
+		dfastates[i].states = NULL;
+		dfastates[i].accept = -1;
+	}
 
 	/* some internal parmaters */
 	ndfas = 1;
 	currentdfa = 0;
 }
 
-static int add_dfas(struct set *dfa)
+static int add_dfas(struct set *nfastates, int accept)
 {
 	if (ndfas >= MAX_DFAS)
 		errexit("dfas overflows");
 		
-	if (dfa && dfastates)
-		dfastates[ndfas] = dfa;
+	if (nfastates && dfastates) {
+		dfastates[ndfas].states = nfastates;
+		dfastates[ndfas].accept = accept;
+	}
 	return ndfas++;
 }
 
-static int in_dfas(struct set *set)
+static int in_dfas(struct set *states)
 {
 	int i;
 	/* no safe check */
 	for (i = 0; i < ndfas; i++) {
-		if (equset(set, dfastates[i]))
+		if (equset(states, dfastates[i].states))
 			return i;
 	}
 	return -1;
 }
+int state_dfas(struct dfa *dfa)
+{
+	return dfa - dfastates;
+}
 
-static struct set *next_dfas(void)
+static struct dfa *next_dfas(void)
 {
 	if (currentdfa >= ndfas)
 		return NULL;
-	return dfastates[currentdfa++];
+	return &dfastates[currentdfa++];
 }
 
 void subsetconstruct(int (*dfatable)[128], struct set *acceptset)
 {
-	struct set *dfa, *next;
+	struct dfa *dfa;
+	struct set *next;
 	int nextstate = 0;
 	int c, accept, state;
 
 	while (dfa = next_dfas()) {
 		for (c = 0; c < MAX_CHARS; c++) {
 			/* compute next dfa, to which dfa move on c */
-			next = epsilon_closure(move(dfa, c), &accept, 0);
+			accept = -1;
+			next = move(dfa->states, c);
+			next = epsilon_closure(next, &accept, 0);
 			/* no transition */
 			if (!next)
 				state = F;
@@ -88,9 +102,9 @@ void subsetconstruct(int (*dfatable)[128], struct set *acceptset)
 			else if ((state = in_dfas(next)) >= 0)
 				delset(next);
 			else
-				state = add_dfas(next);
-			dfatable[currentdfa - 1][c] = state;
-			if (next && accept >= 0)
+				state = add_dfas(next, accept);
+			dfatable[state_dfas(dfa)][c] = state;
+			if (accept >= 0)
 				addset(acceptset, ndfas - 1);
 		}
 	}

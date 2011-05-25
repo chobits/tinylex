@@ -149,7 +149,10 @@ void closure(struct nfa **start, struct nfa **end)
 	LEAVE();
 }
 
-/* parentheses -> ( regular ) | <terminal> */
+/* 
+ * parentheses -> ( regular ) | <terminal> 
+ * NOTE: `( epsilon )` is error!
+ */
 void parentheses(struct nfa **start, struct nfa **end)
 {
 	ENTER();
