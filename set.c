@@ -1,6 +1,6 @@
+#include <string.h>
 #include "lib.h"
 #include "set.h"
-#include <string.h>
 
 void complset(struct set *set)
 {
@@ -57,9 +57,28 @@ struct set *dupset(struct set *orignal)
 	new = xmalloc(sizeof(*new));
 	memcpy(new, orignal, sizeof(*new));
 	/* fix default map pointer */
-	if (orignal->map == orignal->defmap)
+	if (orignal->map == orignal->defmap) {
 		new->map = new->defmap;
+	} else {
+		new->map = xmalloc(orignal->ncells);
+		memcpy(new->map, orignal->map, orignal->ncells);
+	}
 	return new;
+}
+
+void copyset(struct set *old, struct set *new)
+{
+	if (!old || !new)
+		return;
+	memcpy(new, old, sizeof(*old));
+	/* fix default map pointer */
+	if (old->map == old->defmap) {
+		new->map = new->defmap;
+	} else {
+		new->map = xmalloc(old->ncells);
+		memcpy(new->map, old->map, old->ncells);
+	}
+
 }
 
 /*
@@ -81,6 +100,25 @@ void expandset(struct set *set, int entry)
 	/* free original expanded map */
 	if (bak != set->defmap)
 		free(bak);
+}
+
+int equset(struct set *s1, struct set *s2)
+{
+	int i;
+	unsigned int k;
+	if (s1->nbits != s2->nbits)
+		return 0;
+	for (i = 0; i < s1->ncells; i++) {
+		/* complemented */
+		if (s1->compl ^ s2->compl) {
+			if (s1->map[i] & s2->map[i])
+				return 0;
+		} else {
+			if (s1->map[i] != s2->map[i])
+				return 0;
+		}
+	}
+	return 1;
 }
 
 int memberofset(int member, struct set *set)
@@ -182,3 +220,53 @@ void outputmap(struct set *set)
 		printf("%02x ", set->map[i]);
 	printf("\n");
 }
+
+#ifdef SET_TEST
+
+void equset_test(void)
+{
+	struct set *s1, *s2;
+	dbg("equset test:");
+
+	s1 = newset();
+	s2 = newset();
+
+	addset(s1, 0);
+	addset(s2, 0);
+	if (!equset(s1, s2))
+		errexit("set test 1 error");
+
+	complset(s2);
+	if (s2->compl != 0xffffffff)
+		errexit("set test 1.5 error");
+
+	if (equset(s1, s2))
+		errexit("set test 2 error");
+
+	complset(s1);
+	if (!equset(s1, s2))
+		errexit("set test 3 error");
+
+	complset(s1);
+	complset(s2);
+	addset(s1, 111);
+	if (equset(s1, s2))
+		errexit("set test 4 error");
+
+	complset(s1);
+	if (equset(s1, s2))
+		errexit("set test 5 error");
+
+	delset(s1);
+	delset(s2);
+
+	dbg("ok!");
+}
+
+int main(void)
+{
+	equset_test();
+	return 0;
+}
+
+#endif

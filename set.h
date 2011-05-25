@@ -15,7 +15,7 @@
  * type definition
  */
 /* 256 for basically supporting ASCII set */
-#define DEF_MAPBITS		256
+#define DEF_MAPBITS		128
 #define DEF_MAPCELLS		CELLS_UP(DEF_MAPBITS)
 
 #define set_cell_t		unsigned char

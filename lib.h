@@ -7,5 +7,5 @@
 
 void errexit(char *str);
 void *xmalloc(size_t size);
-
+#define dbg(fmt, arg...) fprintf(stderr, "%s "fmt"\n", __FUNCTION__, ##arg)
 #endif

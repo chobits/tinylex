@@ -8,18 +8,18 @@
 #ifdef DEBUG
 
 static int calldepth = 0;
-
+static const char space[] = "                                        ";
 #define ENTER()\
 do {\
 	fprintf(stderr, "%.*s+ %s [%.*s]\n",\
-		calldepth * 3, " ", __FUNCTION__, yyleng, yytext);\
+		calldepth * 3, space, __FUNCTION__, yyleng, yytext);\
 	calldepth++;\
 } while (0)
 
 #define LEAVE()\
 do {\
 	calldepth--;\
-	fprintf(stderr, "%.*s- %s\n", calldepth * 3, " ", __FUNCTION__);\
+	fprintf(stderr, "%.*s- %s\n", calldepth * 3, space, __FUNCTION__);\
 } while (0)
 
 #else
@@ -436,7 +436,7 @@ void printedge(struct nfa *nfa, struct nfa *pstart)
  * @n      nfa number
  * @lstart logical staring nfa
  */
-void traverse_nfa(struct nfa *pstart, int n, struct nfa *lstart)
+void __traverse_nfa(struct nfa *pstart, int n, struct nfa *lstart)
 {
 	struct nfa *nfa;
 	int i;
@@ -452,6 +452,11 @@ void traverse_nfa(struct nfa *pstart, int n, struct nfa *lstart)
 	}
 }
 
+void traverse_nfa(struct nfa *lstart)
+{
+	__traverse_nfa(nfabuf, nfapos, lstart);
+}
+
 #ifdef NFATEST
 
 int main(int argc, char **argv)
@@ -461,7 +466,7 @@ int main(int argc, char **argv)
 		fileopen(argv[1]);
 	init_nfa_buffer();
 	nfa = rule();
-	traverse_nfa(nfabuf, nfapos, nfa);
+	traverse_nfa(nfa);
 }
 
 #endif

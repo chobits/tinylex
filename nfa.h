@@ -30,7 +30,8 @@ extern int nfapos;
 extern struct nfa *nfabuf;
 
 /* extern function */
-extern void traverse_nfa(struct nfa *, int, struct nfa *);
+extern void __traverse_nfa(struct nfa *, int, struct nfa *);
+extern void traverse_nfa(struct nfa *);
 extern struct nfa *rule(void);
 
 
