@@ -51,7 +51,7 @@ token_t get_token(void)
 	while (1) {
 		c = get_char();
 		if (c != '\n')
-			break;	
+			break;
 	}
 
 	/* escape char */

@@ -52,7 +52,7 @@ static int add_dfas(struct set *nfastates, int accept)
 {
 	if (ndfas >= MAX_DFAS)
 		errexit("dfas overflows");
-		
+
 	if (nfastates && dfastates) {
 		dfastates[ndfas].states = nfastates;
 		dfastates[ndfas].accept = accept;
@@ -128,7 +128,7 @@ int dfaconstruct(struct nfa *sstate, int (**table)[], struct set **acceptset)
 	/* alloc accept set */
 	accept = newset();
 
-	/* 
+	/*
 	 * init internal dfa auxiliary method,
 	 *  which is used in subsetconstruct()
 	 */
@@ -148,7 +148,7 @@ int dfaconstruct(struct nfa *sstate, int (**table)[], struct set **acceptset)
 		*table = dfatable;
 	if (acceptset)
 		*acceptset = accept;
-		
+
 	return ndfas;
 }
 
@@ -172,7 +172,7 @@ int main(int argc, char **argv)
 	char line[256];
 	struct nfa *nfa;
 	struct set *accept;
-	/* 
+	/*
 	 * NOTE: int *table1[x] --> size = x*4
 	 *       int (*table2)[x] --> size = 4
 	 *       typeof(&table2) --> int (**table2p)[x]
