@@ -40,7 +40,7 @@ struct set *allocset(int nbits)
 	return set;
 }
 
-void delset(struct set *set)
+void freeset(struct set *set)
 {
 	if (!set)
 		return;
@@ -48,6 +48,16 @@ void delset(struct set *set)
 	if (set->map && set->map != set->defmap)
 		free(set->map);
 	free(set);
+}
+
+void delset(struct set *set, int entry)
+{
+	if (entry > set->nbits)
+		return;
+	if (set->compl)
+		set->map[CELLS(entry)] |= 1 << CELL_BIT(entry);
+	else
+		set->map[CELLS(entry)] &= ~(1 << CELL_BIT(entry));
 }
 
 /* duplicate @orignal set */
@@ -147,6 +157,11 @@ void addset(struct set *set, int entry)
 		set->used--;
 		set->map[CELLS(entry)] &= ~(1 << CELL_BIT(entry));
 	}
+}
+
+int emptyset(struct set *set)
+{
+	return !set->used;
 }
 
 /*
@@ -257,8 +272,8 @@ void equset_test(void)
 	if (equset(s1, s2))
 		errexit("set test 5 error");
 
-	delset(s1);
-	delset(s2);
+	freeset(s1);
+	freeset(s2);
 
 	dbg("ok!");
 }

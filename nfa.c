@@ -457,7 +457,9 @@ void __traverse_nfa(struct nfa *pstart, int n, struct nfa *lstart)
 
 void traverse_nfa(struct nfa *lstart)
 {
+	printf("\n[===   NFAS   ===]\n");
 	__traverse_nfa(nfabuf, nfapos, lstart);
+	printf("[=== NFAS end ===]\n");
 }
 
 #ifdef NFATEST

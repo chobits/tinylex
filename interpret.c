@@ -219,15 +219,15 @@ int grep(char *line, struct nfa *nfa, char **endstr)
 		}
 
 		/* for next loop */
-		delset(start);
+		freeset(start);
 		start = end;
 		end = NULL;
 		bufpos++;
 	}
 	if (start)
-		delset(start);
+		freeset(start);
 	if (end)
-		delset(end);
+		freeset(end);
 	/* output matched string */
 	if (prevaccept >= 0) {
 		if (endstr)

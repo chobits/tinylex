@@ -5,15 +5,16 @@
 #include "dfa.h"
 #include "lib.h"
 
+
 /* dfa sets auxiliary function */
-static int currentdfa, ndfas;
-static struct dfa *dfastates = NULL;
+int currentdfa, ndfas;
+struct dfa *dfastates = NULL;
 
 static void free_dfas(void)
 {
 	int i;
 	for (i = 0; i < ndfas; i++)
-		delset(dfastates[i].states);
+		freeset(dfastates[i].states);
 	free(dfastates);
 }
 
@@ -22,10 +23,16 @@ static void init_dfas(struct nfa *sstate, struct set *acceptset)
 	struct set *first;
 	int i, accept;
 	dfastates = xmalloc(MAX_DFAS * sizeof(struct dfa));
+	/* others */
+	for (i = 0; i < MAX_DFAS; i++) {
+		dfastates[i].group = -1;
+		dfastates[i].states = NULL;
+		dfastates[i].accept = -1;
+	}
 	/*
 	 * init first dfa state
-	 * NOTE: First NFA cannot be accepted,
-	 *       so epsilon_closure second parameter is set NULL
+	 * NOTE: First NFA cannot be accepted, 
+	 *       so epsilon_closure second parameter is set NULL 
 	 */
 	first = newset();
 	addset(first, nfastate(sstate));
@@ -36,19 +43,13 @@ static void init_dfas(struct nfa *sstate, struct set *acceptset)
 		dfastates[0].accept = accept;
 	}
 
-	/* others */
-	for (i = 1; i < MAX_DFAS; i++) {
-		dfastates[i].group = 0;
-		dfastates[i].states = NULL;
-		dfastates[i].accept = -1;
-	}
 
 	/* some internal parmaters */
 	ndfas = 1;
 	currentdfa = 0;
 }
 
-static int add_dfas(struct set *nfastates, int accept)
+static int add_dfa(struct set *nfastates, int accept)
 {
 	if (ndfas >= MAX_DFAS)
 		errexit("dfas overflows");
@@ -60,7 +61,7 @@ static int add_dfas(struct set *nfastates, int accept)
 	return ndfas++;
 }
 
-static int in_dfas(struct set *states)
+static int in_dfa(struct set *states)
 {
 	int i;
 	/* no safe check */
@@ -70,12 +71,13 @@ static int in_dfas(struct set *states)
 	}
 	return -1;
 }
-int state_dfas(struct dfa *dfa)
+
+int state_dfa(struct dfa *dfa)
 {
 	return dfa - dfastates;
 }
 
-static struct dfa *next_dfas(void)
+static struct dfa *next_dfa(void)
 {
 	if (currentdfa >= ndfas)
 		return NULL;
@@ -89,7 +91,7 @@ void subsetconstruct(int (*dfatable)[128], struct set *acceptset)
 	int nextstate = 0;
 	int c, accept, state;
 
-	while (dfa = next_dfas()) {
+	while (dfa = next_dfa()) {
 		for (c = 0; c < MAX_CHARS; c++) {
 			/* compute next dfa, to which dfa move on c */
 			accept = -1;
@@ -99,23 +101,22 @@ void subsetconstruct(int (*dfatable)[128], struct set *acceptset)
 			if (!next)
 				state = F;
 			/* transition from current to next */
-			else if ((state = in_dfas(next)) >= 0)
-				delset(next);
+			else if ((state = in_dfa(next)) >= 0)
+				freeset(next);
 			else
-				state = add_dfas(next, accept);
-			dfatable[state_dfas(dfa)][c] = state;
+				state = add_dfa(next, accept);
+			dfatable[state_dfa(dfa)][c] = state;
 			if (accept >= 0)
 				addset(acceptset, ndfas - 1);
 		}
 	}
-
 }
 
 /*
  * subset construction:
  * convert NFA directed graph to DFA table
  */
-int dfaconstruct(struct nfa *sstate, int (**table)[], struct set **acceptset)
+int construct_dfa(struct nfa *sstate, int (**table)[], struct set **acceptset)
 {
 	/* dfatable[STATES][CHARS] */
 	int (*dfatable)[MAX_CHARS];
@@ -137,9 +138,6 @@ int dfaconstruct(struct nfa *sstate, int (**table)[], struct set **acceptset)
 	/* subset construction */
 	subsetconstruct(dfatable, accept);
 
-	/* free dfa state sets */
-	free_dfas();
-
 	/* adjust dfatable real size */
 	dfatable = realloc(dfatable, ndfas * MAX_CHARS * sizeof(int));
 
@@ -155,14 +153,16 @@ int dfaconstruct(struct nfa *sstate, int (**table)[], struct set **acceptset)
 void traverse_dfatable(int (*dfatable)[128], int size, struct set *accept)
 {
 	int i, c;
+	printf("\n-====== debug dfa table ========-\n");
 	for (i = 0; i < size; i++) {
 		for (c = 0; c < MAX_CHARS; c++)
 			if (dfatable[i][c] >= 0)
-				printf("%d --> %d on %c\n",
+				printf("  %d --> %d on %c\n",
 					i, dfatable[i][c], c);
 	}
 	for (nextmember(NULL); (i = nextmember(accept)) != -1; i++)
-		printf("accept state:%d\n", i);
+		printf(" accept state:%d\n", i);
+	printf("-====== end debug dfa table ====-\n");
 }
 
 #ifdef DFA_TABLE_TEST
@@ -190,8 +190,11 @@ int main(int argc, char **argv)
 	nfa = rule();
 	traverse_nfa(nfa);
 	/* construct dfa table */
-	size = dfaconstruct(nfa, &table, &accept);
+	size = construct_dfa(nfa, &table, &accept);
 	traverse_dfatable(table, size, accept);
+
+	/* free dfa state sets */
+	free_dfas();
 
 	return 0;
 }

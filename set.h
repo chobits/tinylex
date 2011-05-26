@@ -37,7 +37,9 @@ extern void expandset(struct set *set, int entry);
 extern void addset(struct set *set, int entry);
 extern struct set *dupset(struct set *orignal);
 extern int memberofset(int member, struct set *set);
-extern void delset(struct set *set);
+extern void freeset(struct set *set);
+extern void delset(struct set *set, int entry);
 extern void complset(struct set *set);
+extern int emptyset(struct set *set);
 
 #endif	/* set.h */
