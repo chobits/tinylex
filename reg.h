@@ -13,7 +13,6 @@
 
 extern void errexit(char *);
 extern void fileopen(char *);
-extern void regexp(void);
 extern struct regnode *interpret(void);
 
 #endif

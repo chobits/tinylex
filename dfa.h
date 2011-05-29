@@ -1,6 +1,8 @@
 #ifndef __DFA_H
 #define __DFA_H
 
+#include "nfa.h"
+
 #define MAX_CHARS	128
 #define MAX_DFAS	128
 #define MAX_GROUPS	128
@@ -19,5 +21,8 @@ struct dfa {
 	int accept;
 };
 
+extern int ngroups;
+extern void traverse_dfatable(int (*)[128], int, struct set *);
+extern int construct_dfa(struct nfa *, int (**)[], struct set **);
 
 #endif	/* dfa.h */

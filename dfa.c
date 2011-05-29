@@ -5,7 +5,6 @@
 #include "dfa.h"
 #include "lib.h"
 
-
 /* dfa sets auxiliary function */
 int currentdfa, ndfas;
 struct dfa *dfastates = NULL;
@@ -187,7 +186,7 @@ int main(int argc, char **argv)
 	fileopen(argv[1]);
 	/* construct NFA from regular expression */
 	init_nfa_buffer();
-	nfa = rule();
+	nfa = machine();
 	traverse_nfa(nfa);
 	/* construct dfa table */
 	size = construct_dfa(nfa, &table, &accept);

@@ -3,123 +3,227 @@
 #include <string.h>
 #include <fcntl.h>
 #include "token.h"
-
-static char buf[128];
-static int fd = 0, eof = 0;
-static int pos = 0, size = 0, lineno = 1;
+#include "text.h"
+#include "macro.h"
 
 char *yytext = NULL;
 int yyleng = 0;
 
+static unsigned int inmacro = 0;
+static char *macrotext;
+static char *macropos;
+
 void mark_start(void)
 {
-	yytext = &buf[pos];
+	if (inmacro)
+		yytext = macropos;
+	else
+		yytext = text_getpos();
 	yyleng = 0;
 }
 
 void mark_end(void)
 {
-	yyleng = &buf[pos] - yytext;
+	if (inmacro)
+		yyleng = macropos - yytext;
+	else
+		yyleng = text_getpos() - yytext;
 }
 
-void fillbuf(void)
+int token_getchar(void)
 {
-	size = read(fd, buf, 128);
-	if (size < 128)
-		eof = 1;
-	pos = 0;
-}
-
-char get_char(void)
-{
-	while (pos >= size) {
-		if (eof)
-			return EOF;
-		fillbuf();
+	/* output expanded macro char */
+	if (inmacro) {
+		if (*macropos)
+			return *macropos++;
+		inmacro = 0;
+		macropos = NULL;
+		mark_start();	/* remark */
 	}
-	if (buf[pos] == '\n')
-		lineno++;
-	return buf[pos++];
+	return text_getchar();
 }
+
+/* expand {macro} */
+void token_expand_macro(void)
+{
+	static char macro[128];
+	int c, len;
+
+	if (inmacro)
+		text_errx("recursive macro expand");
+	len = 0;
+	while (len < 128) {
+		c = text_getchar();
+		/* macro end */
+		if (c == '}')
+			break;
+		if (!ismacrochar(c))
+			text_errx("invalid macro char");
+		macro[len] = c;
+		len++;
+	}
+	if (len >= 128)
+		text_errx("macro name is too long");
+	macro[len] = '\0';
+	macrotext = expand_macro(macro);
+	if (!macrotext)
+		text_errx("macro is not existed");
+	inmacro = 1;
+	macropos = macrotext;
+}
+
+/* map char to token */
+static const int tokenmap[128] = {
+/* 0    '\0'    SOH     STX     ETX     ENQ     ACK     '\a'    '\b' */
+	L,	L,	L,	L,	L,	L,	L,	L,
+/* 8    '\b'    '\t'    '\n'    '\v'    '\f'    '\r'    SO      SI   */
+	L,	L,	EOL,	L,	L,	L,	L,	L,
+/* 16   DLE     DC1     DC2     DC3     DC4     NAK     SYN     ETB  */
+	L,	L,	L,	L,	L,	L,	L,	L,
+/* 24   CAN     EM      SUB     ESC     FS      GS      RS      US   */
+	L,	L,	L,	L,	L,	L,	L,	L,
+/* 32   ' '     !       "       #       $       %       &       '    */
+	L,	L,	L,	L,	DOLLAR,	L,	L,	L,
+/* 40   (       )       *       +               -       .       ´    */
+	LP,	RP,	AST,	ADD,	L,	DASH,	DOT,	L,
+/* 48   0       1       2       3       4       5       6       7    */
+	L,	L,	L,	L,	L,	L,	L,	L,
+/* 56   8       9       :       ;       <       =       >       ?    */
+	L,	L,	L,	L,	L,	L,	L,	QST,
+/* 64   @       A       B       C       D       E       F       G    */
+	L,	L,	L,	L,	L,	L,	L,	L,
+/* 72   H       I       J       K       L       M       N       O    */
+	L,	L,	L,	L,	L,	L,	L,	L,
+/* 80   P       Q       R       S       T       U       V       W    */
+	L,	L,	L,	L,	L,	L,	L,	L,
+/* 88   X       Y       Z       [       \       ]       ^       _    */
+	L,	L,	L,	LSB,	L,	RSB,	UPA,	L,
+/* 96   `       a       b       c       d       e       f       g    */
+	L,	L,	L,	L,	L,	L,	L,	L,
+/* 104  h       i       j       k       l       m       n       o    */
+	L,	L,	L,	L,	L,	L,	L,	L,
+/* 112  p       q       r       s       t       u       v       w    */
+	L,	L,	L,	L,	L,	L,	L,	L,
+/* 120  x       y       z       {       |       }       ~       DEL  */
+	L,	L,	L,	LCP,	OR,	RCP,	L,	L,
+};
 
 token_t get_token(void)
 {
-	int c, escape = 0;
+	static unsigned int inquota = 0;	/* "in quotation" */
+	int c;
 	token_t type;
-
+restart:
 	mark_start();
-	while (1) {
-		c = get_char();
-		if (c != '\n')
-			break;
+
+	c = token_getchar();
+	/* handle "quato" */
+	if (c == '"') {
+		inquota = ~inquota;
+		goto restart;
 	}
 
-	/* escape char */
-	if (c == '\\') {
-		escape = 1;
-		c = get_char();
+	/* hansle {macro} */
+	if (c == '{' && !inquota) {
+		token_expand_macro();
+		goto restart;
 	}
 
+	type = L;
 	switch (c) {
-	case '.':
-		type = DOT;
-		break;
-	case '^':
-		type = UPARROW;
-		break;
-	case '$':
-		type = DOLLAR;
-		break;
-	case '[':
-		type = LSB;
-		break;
-	case ']':
-		type = RSB;
-		break;
-	case '(':
-		type = LP;
-		break;
-	case ')':
-		type = RP;
-		break;
-	case '-':
-		type = DASH;
-		break;
-	case '*':
-		type = ASTERISK;
-		break;
-	case '?':
-		type = QUESTION;
-		break;
-	case '+':
-		type = ADD;
-		break;
-	case '|':
-		type = OR;
+	case '\t':
+	case ' ':
+		type = EORE;
 		break;
 	case EOF:
 		type = _EOF;
 		break;
 	default:
-		type = TERMINAL;
+		type = tokenmap[c];
 		break;
 	}
 	mark_end();
-
-	if (escape) {
-		if (type == _EOF)
-			errexit("string: \\EOF");
-		else
-			type = TERMINAL;
-	}
+	if (inquota)
+		type = L;
 
 	return type;
 }
 
 void fileopen(char *path)
 {
-	fd = open(path, O_RDONLY);
-	if (fd == -1)
-		errexit("open");
-
+	text_open(path);
 }
+
+#ifdef TOKEN_TEST
+
+int main(int argc, char **argv)
+{
+	token_t type;
+
+	/* init */
+	if (argc == 2)
+		fileopen(argv[1]);
+
+	parse_cheader();
+	parse_macro();
+
+	while ((type = get_token()) != _EOF) {
+		switch (type) {
+		case EORE:
+			printf("[EORE]");
+			break;
+		case DOT:
+			printf("[DOT]");
+			break;
+		case UPA:
+			printf("[UPA]");
+			break;
+		case DOLLAR:
+			printf("[DOLLAR]");
+			break;
+		case LSB:
+			printf("[LSB]");
+			break;
+		case RSB:
+			printf("[RSB]");
+			break;
+		case LP:
+			printf("[LP]");
+			break;
+		case RP:
+			printf("[RP]");
+			break;
+		case DASH:
+			printf("[DASH]");
+			break;
+		case AST:
+			printf("[AST]");
+			break;
+		case QST:
+			printf("[?]");
+			break;
+		case ADD:
+			printf("[+]");
+			break;
+		case OR:
+			printf("[|]");
+			break;
+		case EOL:
+			printf("[EOL]");
+			break;
+		case _EOF:
+			printf("[EOF]");
+			break;
+		case L:
+			printf("[terminal:%c]", *yytext);
+			break;
+		default:
+			errexit("unknown token");
+			break;
+		}
+		printf("\n");
+	}
+	return 0;
+}
+
+#endif	/* TOKEN_TEST */

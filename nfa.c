@@ -4,22 +4,23 @@
 #include "reg.h"
 #include "set.h"
 #include "nfa.h"
+#include "text.h"
 
 #ifdef DEBUG
 
 static int calldepth = 0;
-static const char space[] = "                                        ";
+static const char _space[] = "                                        ";
 #define ENTER()\
 do {\
 	fprintf(stderr, "%.*s+ %s [%.*s]\n",\
-		calldepth * 3, space, __FUNCTION__, yyleng, yytext);\
+		calldepth * 3, _space, __FUNCTION__, yyleng, yytext);\
 	calldepth++;\
 } while (0)
 
 #define LEAVE()\
 do {\
 	calldepth--;\
-	fprintf(stderr, "%.*s- %s\n", calldepth * 3, space, __FUNCTION__);\
+	fprintf(stderr, "%.*s- %s\n", calldepth * 3, _space, __FUNCTION__);\
 } while (0)
 
 #else
@@ -28,7 +29,6 @@ do {\
 
 #endif /* DEBUG */
 
-extern void reg(struct nfa **start, struct nfa **end);
 
 int nfapos = 0;
 struct nfa *nfabuf = NULL;
@@ -96,7 +96,7 @@ int match(token_t type)
 
 void advance(void)
 {
-	current = NIL;
+	current = get_token();
 }
 
 void matched(token_t type)
@@ -112,7 +112,7 @@ void terminal(struct nfa **start, struct nfa **end)
 {
 	ENTER();
 	/* at least one terminal */
-	if (match(TERMINAL)) {
+	if (match(L)) {
 		/* real allocing for NFA */
 		*start = allocnfa();
 		*end = allocnfa();
@@ -132,14 +132,14 @@ void closure(struct nfa **start, struct nfa **end)
 {
 	ENTER();
 	struct nfa *istart, *iend;
-	while (match(ASTERISK) || match(ADD) || match(QUESTION)) {
+	while (match(AST) || match(ADD) || match(QST)) {
 		istart = allocnfa();
 		iend = allocnfa();
 		istart->next[0] = *start;
 		(*end)->next[0] = iend;
-		if (match(ASTERISK) || match(ADD))
+		if (match(AST) || match(ADD))
 			(*end)->next[1] = *start;
-		if (match(ASTERISK) || match(QUESTION))
+		if (match(AST) || match(QST))
 			istart->next[1] = iend;
 		/* update */
 		*start = istart;
@@ -149,6 +149,7 @@ void closure(struct nfa **start, struct nfa **end)
 	LEAVE();
 }
 
+extern void regstr(struct nfa **, struct nfa **);
 /*
  * parentheses -> ( regular ) | <terminal>
  * NOTE: `( epsilon )` is error!
@@ -158,7 +159,7 @@ void parentheses(struct nfa **start, struct nfa **end)
 	ENTER();
 	if (match(LP)) {		/* ( */
 		advance();
-		reg(start, end);
+		regstr(start, end);
 		matched(RP);		/* ) */
 	} else {
 		terminal(start, end);
@@ -217,7 +218,7 @@ void squarebrackets(struct nfa **start, struct nfa **end)
 		(*start)->next[0] = *end;
 		(*start)->edge = EG_CCL;
 		/* uparrow ^ */
-		if (match(UPARROW))	/* [^ ... ] */
+		if (match(UPA))	/* [^ ... ] */
 			advance();	/* not set anchor field here */
 
 		/*  epsilon or string */
@@ -258,15 +259,17 @@ int cc_first_set(void)
 	case RP:	/* ) */
 	case OR:	/* | */
 	case _EOF:	/* EOF */
+	case EOL:
+	case EORE:
 	case DOLLAR:	/* $ */
 		return 0;
 		break;
 	case DASH:	/* - */
 	case ADD:	/* + */
-	case ASTERISK:	/* * */
-	case QUESTION:	/* ? */
+	case AST:	/* * */
+	case QST:	/* ? */
 	case RSB:	/* ] */
-	case UPARROW:	/* ^ */
+	case UPA:	/* ^ */
 		errexit("not matched concatenation");
 		return 0;
 		break;
@@ -298,12 +301,11 @@ void regor(struct nfa **start, struct nfa **end)
 	LEAVE();
 }
 
-
 /*
- * reg -> regor OR reg
+ * regstr -> regor OR regstr
  *      | regor
  */
-void reg(struct nfa **start, struct nfa **end)
+void regstr(struct nfa **start, struct nfa **end)
 {
 	struct nfa *istart, *iend;
 	ENTER();
@@ -326,20 +328,22 @@ void reg(struct nfa **start, struct nfa **end)
 }
 
 /*
- * rule -> ^ reg | reg $ | reg
+ * regexp -> ^ regstr | regstr $ | regstr
  */
-struct nfa *rule(void)
+void regexp(struct nfa **startp, struct nfa **endp)
 {
 	struct nfa *start, *end;
+	ENTER();
+
 	int anchor = AC_NONE;
-	if (match(UPARROW)) {			/* ^... */
+	if (match(UPA)) {			/* ^... */
 		advance();
 		start = allocnfa();
 		start->edge = '\n';
-		reg(start->next, &end);
+		regstr(start->next, &end);
 		anchor |= AC_START;
 	} else {
-		reg(&start, &end);
+		regstr(&start, &end);
 	}
 
 	if (match(DOLLAR)) {			/* ...$ */
@@ -353,7 +357,100 @@ struct nfa *rule(void)
 	end->anchor = anchor;
 	end->edge = EG_EMPTY;
 
-	matched(_EOF);
+	/* set return value */
+	*startp = start;
+	*endp = end;
+	LEAVE();
+}
+
+/*
+ * action -> string | { string }
+ */
+void action(struct nfa *end)
+{
+	ENTER();
+	dbg("action");
+	LEAVE();
+}
+
+/*
+ * specail handle: skip blank char(space or tab),
+ *                 not using token stream 
+ */
+void space(void)
+{
+	int c;
+	do {
+		c = text_getchar();
+	} while (isblank(c));
+	if (c != EOF)
+		text_backchar();
+}
+
+/*
+ * rule -> space regexp space action space EOL
+ *       | space regexp space EOL
+ */
+struct nfa *rule(void)
+{
+	struct nfa *start, *end;
+	ENTER();
+	space();
+	regexp(&start, &end);
+	space();
+	if (!match(EOL)) {
+		action(end);
+		space();
+	}
+	matched(EOL);
+	LEAVE();
+	return start;
+}
+
+/* 
+ * specail handle: match partend `%%`,
+ *                 not using token stream 
+ */
+int matchendpart(void)
+{
+	char *p;
+	p = text_lookahead(2);
+	if (!p || !ispartend(p))
+		return 0;
+	/* skip first `%` for andvance() in machine() */
+	advance();
+	if (!match(L) || *yytext != '%')
+		text_errx("match end part `\%\%` error");
+	return 1;
+}
+
+/*
+ * machine -> <spaceline> rule machine
+ *          | <spaceline> rule EOP
+ */
+struct nfa *machine(void)
+{
+	struct nfa *start, *s;
+	ENTER();
+
+	/* prealloc */
+	start = s = allocnfa();
+	s->next[0] = rule();
+
+	while (1) {
+		/* <spaceline> */
+		skip_whitespace();
+		if (matchendpart() || match(_EOF))
+			break;
+		s->next[1] = allocnfa();
+		s = s->next[1];
+		s->next[0] = rule();
+	}
+
+	/* part end `%%` */
+	advance();
+
+	LEAVE();
 	return start;
 }
 
@@ -470,7 +567,7 @@ int main(int argc, char **argv)
 	if (argc == 2)
 		fileopen(argv[1]);
 	init_nfa_buffer();
-	nfa = rule();
+	nfa = machine();
 	traverse_nfa(nfa);
 }
 

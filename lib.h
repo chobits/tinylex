@@ -5,7 +5,9 @@
 #include <stdio.h>
 #include <errno.h>
 
-void errexit(char *str);
-void *xmalloc(size_t size);
+extern void errexit(char *str);
+extern void *xmalloc(size_t size);
+extern int isspaceline(char *line);
+
 #define dbg(fmt, arg...) fprintf(stderr, "%s "fmt"\n", __FUNCTION__, ##arg)
-#endif
+#endif	/* lib.h */

@@ -250,10 +250,13 @@ int main(int argc, char **argv)
 	if (argc != 3)
 		usage();
 	/* init token stream: interpreting regular expression */
-	fileopen(argv[1]);
+	open_script(argv[1]);
+	parse_cheader();
+	parse_macro();
 	/* construct NFA from regular expression */
+        skip_whitespace();
 	init_nfa_buffer();
-	nfa = rule();
+	nfa = machine();
 
 	/* init file stream */
 	f = fopen(argv[2], "r");
@@ -262,7 +265,8 @@ int main(int argc, char **argv)
 
 	/* grep */
 	lineno = 0;
-	while (fgets(line, 256, f)) {
+	while (fgets(line + 1, 255, f)) {
+		line[0] = '\n';		/* prev line tail */
 		lineno++;
 		lp = line;
 		ep = NULL;
@@ -273,10 +277,14 @@ int main(int argc, char **argv)
 		}
 		/* output matched pattern */
 		if (ep) {
+			/* elimite prev line tail */
+			if (*lp == '\n') {
+				lp++;
+			}
 			/* red matched pattern */
 			printf(green(%d)cambrigeblue(:)"%.*s"red(%.*s)"%s",
 					lineno,
-					lp - line, line,
+					lp - line - 1, line + 1,
 					ep - lp, lp,
 					ep);
 		}

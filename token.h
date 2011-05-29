@@ -5,18 +5,23 @@ typedef enum tokens {
 	NIL,		/* null */
 	DOT,		/* `.`  */
 	OR,		/* `|`  */
-	ASTERISK,	/* `*`  */
+	AST,		/* `*`  asterisk */
 	ADD,		/* `+`  */
-	QUESTION,	/* `?`  */
-	LP,		/* `(`  */
-	RP,		/* `)`  */
-	LSB,		/* `[`  */
-	RSB,		/* `]`  */
+	QST,		/* `?`  question mark */
+	LP,		/* `(`  open parenthesis */
+	RP,		/* `)`  close parenthesis */
+	LSB,		/* `[`  open square brakcet */
+	RSB,		/* `]`  close square bracket */
+	LCP,		/* `{`  open curly bracket */
+	RCP,		/* `}`  close curly bracket */
 	DASH,		/* `-`  */
-	UPARROW,	/* `^`  */
+	UPA,		/* `^`  up arrow anchor */
 	DOLLAR,		/* `$`  */
 	CC,		/* not real token: concatenation */
-	TERMINAL,	/* terminal symbol */
+	L,		/* lexeme */
+	EORE,		/* end of regular expression */
+	EOL,		/* end of line: \n */
+	EOP,		/* end of part: %% */
 	_EOF		/* end of file */
 } token_t;
 

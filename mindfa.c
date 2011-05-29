@@ -103,8 +103,9 @@ void minimize_dfa(int (*table)[128], struct set *accept)
 	do {
 		/* backup ngroups */
 		n = ngroups;
-		for (c = 0; c < MAX_CHARS; c++) {
-			for (group = 0; group < n; group++) {
+		/* loop MAX_CHARS and loop ngroups can swich order */
+		for (c = 0; c < MAX_CHARS; c++) {	/* loop MAX_CHARS */
+			for (group = 0; group < n; group++) {	/* loop ngroups*/
 				part_groups(table, group, c);
 			}
 		}
@@ -193,7 +194,6 @@ void minimize_dfatable2(int (*table)[128], int (**ret)[128])
 #endif
 }
 
-#ifdef MIN_DFA_TEST
 
 void debug_group(void)
 {
@@ -214,6 +214,8 @@ void debug_group(void)
 	fprintf(stderr, "-------end debug group-------\n\n");
 }
 
+#ifdef MIN_DFA_TEST
+
 int main(int argc, char **argv)
 {
 	struct nfa *nfa;
@@ -232,7 +234,7 @@ int main(int argc, char **argv)
 
 	/* construct NFA from regular expression */
 	init_nfa_buffer();
-	nfa = rule();
+	nfa = machine();
 	traverse_nfa(nfa);
 
 	/* construct dfa table */

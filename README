@@ -1,3 +1,5 @@
 What is tinylex?
  A tiny lexical analyser generator
 
+How to implement?
+ I just refer to Allen Holub's book 'Compiler design in C'.
