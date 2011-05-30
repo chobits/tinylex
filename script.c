@@ -1,12 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
-#include "macro.h"
-#include "lib.h"
-#include "nfa.h"
-#include "dfa.h"
-#include "set.h"
-#include "text.h"
+#include <macro.h>
+#include <lib.h>
+#include <nfa.h>
+#include <dfa.h>
+#include <set.h>
+#include <text.h>
 
 static int part = 0;		/* current handing part */
 

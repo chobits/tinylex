@@ -1,11 +1,11 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include "token.h"
-#include "reg.h"
-#include "set.h"
-#include "nfa.h"
-#include "text.h"
+#include <token.h>
+#include <reg.h>
+#include <set.h>
+#include <nfa.h>
+#include <text.h>
 
 #ifdef DEBUG
 

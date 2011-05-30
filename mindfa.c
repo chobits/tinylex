@@ -1,9 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "lib.h"
-#include "dfa.h"
-#include "nfa.h"
-#include "set.h"
+#include <lib.h>
+#include <dfa.h>
+#include <nfa.h>
+#include <set.h>
 
 extern struct dfa *dfastates;
 extern int ndfas;

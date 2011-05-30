@@ -1,6 +1,6 @@
 #include <string.h>
-#include "lib.h"
-#include "set.h"
+#include <lib.h>
+#include <set.h>
 
 void complset(struct set *set)
 {

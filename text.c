@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>
-#include "lib.h"
-#include "reg.h"
+#include <lib.h>
+#include <reg.h>
 
 /*
  * tiny text file stream

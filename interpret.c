@@ -1,9 +1,9 @@
 #include <stdio.h>
 #include <string.h>
-#include "lib.h"
-#include "reg.h"
-#include "set.h"
-#include "nfa.h"
+#include <lib.h>
+#include <reg.h>
+#include <set.h>
+#include <nfa.h>
 
 #define MAXSTACKNFAS 128
 

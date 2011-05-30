@@ -2,9 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <fcntl.h>
-#include "token.h"
-#include "text.h"
-#include "macro.h"
+#include <token.h>
+#include <text.h>
+#include <macro.h>
 
 char *yytext = NULL;
 int yyleng = 0;

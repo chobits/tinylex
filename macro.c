@@ -1,7 +1,7 @@
 #include <string.h>
-#include "lib.h"
-#include "list.h"
-#include "macro.h"
+#include <lib.h>
+#include <list.h>
+#include <macro.h>
 
 static struct list_head macrotable[MACRO_HASH_SIZE];
 

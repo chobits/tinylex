@@ -1,9 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "set.h"
-#include "nfa.h"
-#include "dfa.h"
-#include "lib.h"
+#include <set.h>
+#include <nfa.h>
+#include <dfa.h>
+#include <lib.h>
 
 /* dfa sets auxiliary function */
 int currentdfa, ndfas;
