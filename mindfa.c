@@ -181,7 +181,7 @@ void minimize_dfatable(int (*table)[128], int (**ret)[128])
 	int times = 0;
 #endif
 	/* alloc new minimized table */
-	t = xmalloc(MAX_CHARS * ngroups * sizeof(int));
+	t = xmalloc(MAX_CHARS * (ngroups - sgroup) * sizeof(int));
 
 	/*
 	 * loop hierarchy:
@@ -307,11 +307,11 @@ int main(int argc, char **argv)
 
 	dbg("------minimization 1 test--------");
 	minimize_dfatable(table, &mintable);
-	traverse_dfatable(mintable, ngroups, accept);
+	traverse_dfatable(mintable, ngroups - sgroup, accept);
 
 	dbg("------minimization 2 test--------");
 	minimize_dfatable2(table, &mintable2);
-	traverse_dfatable(mintable2, ngroups, accept);
+	traverse_dfatable(mintable2, ngroups - sgroup, accept);
 
 	return 0;
 }
