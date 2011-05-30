@@ -6,6 +6,7 @@
 #include "nfa.h"
 #include "dfa.h"
 #include "set.h"
+#include "text.h"
 
 static int part = 0;		/* current handing part */
 
@@ -97,6 +98,19 @@ void parse_macro(void)
 		parse_errx("no part end: \%\% ");
 }
 
+void parse_prepare_regexp(void)
+{
+	char *p;
+	if (skip_whitespace() == EOF)
+		text_errx("part2 && part3 is empty");
+	/* `%%\n` */
+	p = text_lookahead(3);
+	if (!p)
+		text_errx("part2 is too small");
+	if (ispartend(p))
+		text_errx("part2 is empty");
+}
+
 void parse_regexp(void)
 {
 	struct nfa *nfa;
@@ -110,8 +124,8 @@ void parse_regexp(void)
 	part = 2;
 
         /* prepare token stream */
-	if (skip_whitespace() == EOF)
-		text_errx("part2 is empty");
+	parse_prepare_regexp();
+
         /* real parse */
 	init_nfa_buffer();
         nfa = machine();

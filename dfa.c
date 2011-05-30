@@ -27,6 +27,7 @@ static void init_dfas(struct nfa *sstate, struct set *acceptset)
 		dfastates[i].group = -1;
 		dfastates[i].states = NULL;
 		dfastates[i].accept = -1;
+		dfastates[i].acceptstr = NULL;
 	}
 	/*
 	 * init first dfa state

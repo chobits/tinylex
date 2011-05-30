@@ -9,6 +9,7 @@
 
 #define RECURSION_EPSILON_CLOSURE
 #ifdef RECURSION_EPSILON_CLOSURE
+
 /*  real recursion computation function */
 void e_closure(struct nfa *nfa, struct set *stateset, int *accept)
 {

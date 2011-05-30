@@ -1,6 +1,6 @@
 OBJS	= tinylex nfa egrep_like dfatable set mindfa text nfa token
 
-all:$(OBJS)
+all:tinylex
 mindfa:mindfa.c dfa.c interpret.c nfa.c regtoken.c reglib.c set.c text.c macro.c
 	gcc -DDEBUG -DDEBUG_MIN_TABLE -DMIN_DFA_TEST $^ -o $@
 dfatable:dfa.c interpret.c nfa.c regtoken.c reglib.c set.c text.c macro.c

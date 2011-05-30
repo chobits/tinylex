@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 #include "token.h"
 #include "reg.h"
 #include "set.h"
@@ -41,6 +42,8 @@ struct nfa *nfastack[STACKNFAS];
 #define nfastackfull() (nfatop >= (STACKNFAS - 1))
 #define nfastackempty() (nfatop < 0)
 
+static char *emptyaction = "";
+
 void init_nfa_buffer(void)
 {
 	nfabuf = (struct nfa *)xmalloc(sizeof(*nfabuf) * MAXNFAS);
@@ -48,11 +51,23 @@ void init_nfa_buffer(void)
 	nfatop = -1;
 }
 
+void free_nfas(void)
+{
+	struct nfa *n;
+	int i;
+	for (n = nfabuf, i = 0; i < nfapos; i++, n++)
+		if (n->accept && n->accept != emptyaction)
+			free(n->accept);
+	free(nfabuf);
+}
+
 void freenfa(struct nfa *n)
 {
 	if (!nfastackfull()) {
 		nfastack[++nfatop] = n;
 		n->edge = EG_DEL;
+		if (n->accept && n->accept != emptyaction)
+			free(n->accept);
 	}
 	/* else-part just discard this nfa */
 }
@@ -81,29 +96,30 @@ struct nfa *allocnfa(void)
 		n = &nfabuf[nfapos++];
 	n->next[0] = NULL;
 	n->next[1] = NULL;
+	n->accept = NULL;
 	n->edge = EG_EPSILON;
 	n->anchor = 0;
+	return n;
 }
 
 static token_t current = NIL;
 
 int match(token_t type)
 {
-	if (current == NIL)
-		current = get_token();
+	current = get_token();
+	back_token();
 	return (current == type);
 }
 
 void advance(void)
 {
-	current = get_token();
+	get_token();
 }
 
 void matched(token_t type)
 {
-	if (match(type))
-		advance();
-	else
+	current = get_token();
+	if (current != type)
 		errexit("not matched");
 }
 
@@ -364,12 +380,30 @@ void regexp(struct nfa **startp, struct nfa **endp)
 }
 
 /*
- * action -> string | { string }
+ * action -> epsilon | one-line string(EOL) | { string } space EOL
  */
 void action(struct nfa *end)
 {
+	char *line;
+	int len;
 	ENTER();
-	dbg("action");
+	/* epsilon */
+	if (match(EOL)) {
+		end->accept = emptyaction;
+		advance();
+		return;
+	}
+
+	/* `{ string }` */
+	if (match(LCP)) {
+		/* FIXME: support { string } */
+		errexit("not support { string }");
+	} else {
+		len = text_getline(&line);
+		if (len == 1)
+			errexit("error new line");
+		end->accept = strdup(line);
+	}
 	LEAVE();
 }
 
@@ -388,8 +422,7 @@ void space(void)
 }
 
 /*
- * rule -> space regexp space action space EOL
- *       | space regexp space EOL
+ * rule -> space regexp space action
  */
 struct nfa *rule(void)
 {
@@ -398,11 +431,7 @@ struct nfa *rule(void)
 	space();
 	regexp(&start, &end);
 	space();
-	if (!match(EOL)) {
-		action(end);
-		space();
-	}
-	matched(EOL);
+	action(end);
 	LEAVE();
 	return start;
 }

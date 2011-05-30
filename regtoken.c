@@ -34,6 +34,10 @@ int token_getchar(void)
 {
 	/* output expanded macro char */
 	if (inmacro) {
+		if (macropos < macrotext) {
+			macropos = macrotext;
+			return *macropos;
+		}
 		if (*macropos)
 			return *macropos++;
 		inmacro = 0;
@@ -147,6 +151,14 @@ restart:
 		type = L;
 
 	return type;
+}
+
+void back_token(void)
+{
+	if (inmacro)
+		macropos--;
+	else
+		text_backchar();
 }
 
 void fileopen(char *path)

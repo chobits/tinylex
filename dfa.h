@@ -19,6 +19,7 @@ struct dfa {
 	struct set *states;	/* nfa states */
 	int group;
 	int accept;
+	char *acceptstr;
 };
 
 extern int ngroups;

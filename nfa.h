@@ -23,6 +23,7 @@ struct nfa {
 	int anchor;
 	struct set *set;	/* concatenation chars */
 	struct nfa *next[2];
+	char *accept;
 };
 
 /* extern global parameter */
