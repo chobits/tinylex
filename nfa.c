@@ -42,7 +42,7 @@ struct nfa *nfastack[STACKNFAS];
 #define nfastackfull() (nfatop >= (STACKNFAS - 1))
 #define nfastackempty() (nfatop < 0)
 
-static char *emptyaction = "";
+static char *emptyaction = "[<empty accept action>]";
 
 void init_nfa_buffer(void)
 {

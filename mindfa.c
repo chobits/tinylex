@@ -10,6 +10,7 @@ extern int ndfas;
 
 struct set *groups[MAX_GROUPS];
 int ngroups;
+int sgroup;	/* start group */
 
 /* group auxiliary functio n*/
 void add_group(int group, int dfa)
@@ -34,27 +35,45 @@ int new_group(void)
 	return ngroups++;
 }
 
-void init_groups(void)
+void debug_group(void);
+int init_groups(void)
 {
-	int i, group;
+	int i, k, group;
+	struct dfa *dfa;
+	struct set *nonaccept;
 
 	for (i = 0; i < MAX_GROUPS; i++)
 		groups[i] = NULL;
 
 	/* init accept group and non-accept group */
+	sgroup = 0;
 	ngroups = 0;
-	new_group();	/* non-accept group: 0 */
-	new_group();	/* accept group: 1 */
-	for (i = 0; i < ndfas; i++) {
-		group = (dfastates[i].accept < 0);
+	new_group();		/* for non-accept group */
+	for (dfa = dfastates, i = 0; i < ndfas; dfa++, i++) {
+		group = 0;
+		if (dfa->acceptstr) {
+			group = -1;
+			/* find the same accept(action) group */
+			for (k = 0; k < i; k++) {
+				if (dfastates[k].acceptstr == dfa->acceptstr) {
+					group = dfastates[k].group;
+					break;
+				}
+			}
+			/* not found, we create new accept group */
+			if (group == -1)
+				group = new_group();
+		}
 		add_group(group, i);
 	}
+
 	/* fix: Is non-accept group? Remove it! */
-	if (emptyset(groups[1])) {
-		freeset(groups[1]);
-		groups[1] = NULL;
-		ngroups--;
+	if (emptyset(groups[0])) {
+		freeset(groups[0]);
+		groups[0] = NULL;
+		sgroup = 1;
 	}
+	debug_group();
 }
 
 int transgroup(int (*dfatable)[128], int dfa, int c)
@@ -94,9 +113,48 @@ void part_groups(int (*dfatable)[128], int g, int c)
 	}
 }
 
+
+/*
+ * reset dfa accept string,
+ * make it associated its new state(group) number
+ */
+void reset_accept(struct set *accept)
+{
+	/* temp accept string stack */
+	struct {
+		int group;
+		char *accept;
+	} accept_stack[MAX_GROUPS];
+
+	int i, top = 0;
+	struct dfa *dfa;
+
+	/* reset accept state */
+	for (nextmember(NULL); (i = nextmember(accept)) != -1; ) {
+		dfa = &dfastates[i];
+		if (!dfa->acceptstr)
+			errexit("accept state dfa has no accept string");
+		/* save accept string */
+		accept_stack[top].group = dfa->group;
+		accept_stack[top].accept = dfa->acceptstr;
+		dfa->acceptstr = NULL;
+		top++;
+		/* reset accept set */
+		delset(accept, i);
+		addset(accept, dfa->group);
+	}
+
+	/* restore saved accept string */
+	for (i = 0; i < top; i++)
+		dfastates[accept_stack[i].group].acceptstr =
+					accept_stack[i].accept;
+}
+
+
+
 void minimize_dfa(int (*table)[128], struct set *accept)
 {
-	int c, group, n;
+	int c, group, n, start_group;
 
 	init_groups();
 	/* minimize dfatable */
@@ -105,17 +163,13 @@ void minimize_dfa(int (*table)[128], struct set *accept)
 		n = ngroups;
 		/* loop MAX_CHARS and loop ngroups can swich order */
 		for (c = 0; c < MAX_CHARS; c++) {	/* loop MAX_CHARS */
-			for (group = 0; group < n; group++) {	/* loop ngroups*/
+			for (group = sgroup; group < n; group++) {	/* loop ngroups*/
 				part_groups(table, group, c);
 			}
 		}
 	} while (n < ngroups);
 
-	/* reset accept state */
-	for (nextmember(NULL); (n = nextmember(accept)) != -1; ) {
-		delset(accept, n);
-		addset(accept, dfastates[n].group);
-	}
+	reset_accept(accept);
 }
 
 void minimize_dfatable(int (*table)[128], int (**ret)[128])
@@ -201,11 +255,14 @@ void debug_group(void)
 	fprintf(stderr, "\n-------debug group-----------\n");
 	for (i = 0; i < ndfas; i++) {
 		g = dfastates[i].group;
-		fprintf(stderr, "dfa %d group %d accept %d\n",
-			i, g, dfastates[i].accept);
+		fprintf(stderr, "dfa %d group %d ", i, g);
+		if (dfastates[i].acceptstr)
+			fprintf(stderr, "accept %s\n", dfastates[i].acceptstr);
+		else
+			fprintf(stderr, "no accept\n");
 	}
 	fprintf(stderr, "\n[groups]\n");
-	for (g = 0; g < ngroups; g++) {
+	for (g = sgroup; g < ngroups; g++) {
 		fprintf(stderr, "group:%d dfas:", g);
 		for (nextmember(NULL); (n = nextmember(groups[g])) != -1;)
 			fprintf(stderr, "%d ", n);
@@ -213,6 +270,7 @@ void debug_group(void)
 	}
 	fprintf(stderr, "-------end debug group-------\n\n");
 }
+
 
 #ifdef MIN_DFA_TEST
 

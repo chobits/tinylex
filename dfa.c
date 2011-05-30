@@ -20,7 +20,8 @@ static void free_dfas(void)
 static void init_dfas(struct nfa *sstate, struct set *acceptset)
 {
 	struct set *first;
-	int i, accept;
+	int i;
+	char *accept;
 	dfastates = xmalloc(MAX_DFAS * sizeof(struct dfa));
 	/* others */
 	for (i = 0; i < MAX_DFAS; i++) {
@@ -38,9 +39,9 @@ static void init_dfas(struct nfa *sstate, struct set *acceptset)
 	addset(first, nfastate(sstate));
 	epsilon_closure(first, &accept, 0);
 	dfastates[0].states = first;
-	if (accept >= 0) {
+	if (accept) {
 		addset(acceptset, 0);
-		dfastates[0].accept = accept;
+		dfastates[0].acceptstr = accept;
 	}
 
 
@@ -49,14 +50,14 @@ static void init_dfas(struct nfa *sstate, struct set *acceptset)
 	currentdfa = 0;
 }
 
-static int add_dfa(struct set *nfastates, int accept)
+static int add_dfa(struct set *nfastates, char *accept)
 {
 	if (ndfas >= MAX_DFAS)
 		errexit("dfas overflows");
 
 	if (nfastates && dfastates) {
 		dfastates[ndfas].states = nfastates;
-		dfastates[ndfas].accept = accept;
+		dfastates[ndfas].acceptstr = accept;
 	}
 	return ndfas++;
 }
@@ -89,12 +90,12 @@ void subsetconstruct(int (*dfatable)[128], struct set *acceptset)
 	struct dfa *dfa;
 	struct set *next;
 	int nextstate = 0;
-	int c, accept, state;
+	int c, state;
+	char *accept;
 
 	while (dfa = next_dfa()) {
 		for (c = 0; c < MAX_CHARS; c++) {
 			/* compute next dfa, to which dfa move on c */
-			accept = -1;
 			next = move(dfa->states, c);
 			next = epsilon_closure(next, &accept, 0);
 			/* no transition */
@@ -106,7 +107,7 @@ void subsetconstruct(int (*dfatable)[128], struct set *acceptset)
 			else
 				state = add_dfa(next, accept);
 			dfatable[state_dfa(dfa)][c] = state;
-			if (accept >= 0)
+			if (accept)
 				addset(acceptset, ndfas - 1);
 		}
 	}
@@ -160,8 +161,9 @@ void traverse_dfatable(int (*dfatable)[128], int size, struct set *accept)
 				printf("  %d --> %d on %c\n",
 					i, dfatable[i][c], c);
 	}
-	for (nextmember(NULL); (i = nextmember(accept)) != -1; i++)
-		printf(" accept state:%d\n", i);
+	for (nextmember(NULL); (i = nextmember(accept)) != -1; i++) {
+		printf(" accept state:%d %s\n", i, dfastates[i].acceptstr);
+	}
 	printf("-====== end debug dfa table ====-\n");
 }
 

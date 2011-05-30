@@ -11,17 +11,19 @@
 #ifdef RECURSION_EPSILON_CLOSURE
 
 /*  real recursion computation function */
-void e_closure(struct nfa *nfa, struct set *stateset, int *accept)
+void e_closure(struct nfa *nfa, struct set *stateset, char **accept)
 {
 	int state;
 	if (!nfa)
 		return;
 
 	state = nfastate(nfa);
-	/* set minimum accept state */
-	if (!nfa->next[0] && accept) {
-		if (state < *accept)
-			*accept = state;
+	/* greedy algorithm: accept as much states as possible */
+	if (!nfa->next[0]) {
+		if (!nfa->accept)
+			errexit("no accept action string");
+		if (accept)
+			*accept = nfa->accept;
 	}
 
 	if (nfa->edge == EG_EPSILON) {
@@ -46,22 +48,25 @@ void e_closure(struct nfa *nfa, struct set *stateset, int *accept)
  *
  * input only contains sstate
  */
-struct set *epsilon_closure(struct set *input, int *accept, int dup)
+struct set *epsilon_closure(struct set *input, char **accept, int dup)
 {
 	int start_state[MAXSTACKNFAS];
 	int state;
 	struct set *output;
 
-	if (!input)
-		return NULL;
-	/* set return value(epsilon closure set) */
-	output = dup ? dupset(input) : input;
 	/*
 	 * We cannot using e_closure(nfa, output),
 	 * because sstate is already in output.
 	 */
 	if (accept)
-		*accept = MAX_INT;
+		*accept = NULL;
+
+	if (!input)
+		return NULL;
+
+	/* set return value(epsilon closure set) */
+	output = dup ? dupset(input) : input;
+
 	/* buffering start state int input */
 	for (nextmember(NULL), state = 0; state < MAXSTACKNFAS; state++) {
 		start_state[state] = nextmember(input);
@@ -76,9 +81,6 @@ struct set *epsilon_closure(struct set *input, int *accept, int dup)
 	/* computing epsilon closure of every start state in input set */
 	for (; state >= 0; state--)
 		e_closure(statenfa(start_state[state]), output, accept);
-	/* if not changed */
-	if (accept && *accept == MAX_INT)
-		*accept = -1;
 
 	return output;
 }
