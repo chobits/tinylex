@@ -1,6 +1,10 @@
 #ifndef __NFA_H
 #define __NFA_H
 
+#ifndef NULL
+#define NULL ((void *)0)
+#endif
+
 #include "set.h"
 #define dbg(fmt, arg...) fprintf(stderr, "%s "fmt"\n", __FUNCTION__, ##arg)
 

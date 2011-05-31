@@ -16,6 +16,7 @@ struct set *newset(void)
 	set->ncells = DEF_MAPCELLS;
 	set->used = 0;
 	set->compl = 0;
+	set->member = 0;
 	/* init default map */
 	set->map = set->defmap;
 	memset(set->map, 0x0, set->ncells);
@@ -214,9 +215,10 @@ int nextmember(struct set *set)
 	if (set != current) {
 		current = set;
 		/* fast find first member cell */
-		for (member = 0; member < current->ncells; member += 8)
-			if (current->map[CELLS(member)])
+		for (member = 0; member < current->ncells; member++)
+			if (current->map[member])
 				break;
+		member <<= 3;
 	}
 
 	while (member < current->nbits) {
@@ -226,6 +228,32 @@ int nextmember(struct set *set)
 	}
 
 	return -1;
+}
+
+int nextmember2(struct set *set)
+{
+	unsigned int member;
+	member = set->member;
+	while (member < set->nbits) {
+		if (memberofset(member, set)) {
+			set->member = member + 1;
+			return member;
+		}
+		member++;
+	}
+	set->member = member;
+	return -1;
+}
+
+void startmember(struct set *set)
+{
+	unsigned int member;
+	for (member = 0; member < set->ncells; member++) {
+		if (set->map[member])
+			break;
+	}
+	member <<= 3;
+	set->member = member;
 }
 
 void outputmap(struct set *set)

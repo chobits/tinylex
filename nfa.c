@@ -269,8 +269,8 @@ void concatenation(struct nfa **start, struct nfa **end)
 
 int cc_first_set(void)
 {
-	if (current == NIL)
-		current = get_token();
+	current = get_token();
+	back_token();
 	switch (current) {
 	case RP:	/* ) */
 	case OR:	/* | */

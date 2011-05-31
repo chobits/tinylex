@@ -25,6 +25,7 @@ struct set {
 	unsigned int used;			/* used bits */
 	unsigned int nbits;
 	unsigned int ncells;
+	unsigned int member;			/* next traversed member in set */
 	set_cell_t *map;			/* real map pointer */
 	set_cell_t defmap[DEF_MAPCELLS];	/* default map cells */
 };
@@ -41,5 +42,9 @@ extern void freeset(struct set *set);
 extern void delset(struct set *set, int entry);
 extern void complset(struct set *set);
 extern int emptyset(struct set *set);
+
+/* @member is returned member value */
+#define for_each_member(member, set)\
+	for (startmember(set); (member = nextmember2(set)) != -1;)
 
 #endif	/* set.h */

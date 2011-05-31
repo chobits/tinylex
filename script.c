@@ -115,11 +115,12 @@ void parse_regexp(void)
 {
 	struct nfa *nfa;
 	struct set *accept;
+	struct set *minaccept;
 
 	int (*table)[MAX_CHARS];	/* dfa table */
 	int (*mintable)[MAX_CHARS];	/* minimized dfa table */
-	int (*mintable2)[MAX_CHARS];	/* minimized dfa table2 */
-	int size;	/* dfa table size */
+	int size;			/* dfa table size */
+	int minsize;			/* minimized dfa table size*/
 
 	part = 2;
 
@@ -130,19 +131,20 @@ void parse_regexp(void)
 	init_nfa_buffer();
         nfa = machine();
 	traverse_nfa(nfa);
+
 	/* construct dfa table */
 	size = construct_dfa(nfa, &table, &accept);
 	traverse_dfatable(table, size, accept);
 
 	/* minimization */
-	minimize_dfa(table, accept);
-
-	/* debug */
-	debug_group();
+	minimize_dfa(table, accept, &minaccept);
 
 	/* minimize dfa table */
-	minimize_dfatable2(table, &mintable2);
-	traverse_dfatable(mintable2, ngroups, accept);
+	minsize = minimize_dfatable2(table, &mintable);
+	traverse_dfatable(mintable, minsize, minaccept);
+
+	/* compress dfa table */
+	compress_dfatable(mintable, minsize, MAX_CHARS);
 }
 
 void parse_ccode(void)

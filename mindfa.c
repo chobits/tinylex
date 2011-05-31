@@ -118,7 +118,7 @@ void part_groups(int (*dfatable)[128], int g, int c)
  * reset dfa accept string,
  * make it associated its new state(group) number
  */
-void reset_accept(struct set *accept)
+void reset_accept(struct set *accept, struct set **ap)
 {
 	/* temp accept string stack */
 	struct {
@@ -128,7 +128,9 @@ void reset_accept(struct set *accept)
 
 	int i, top = 0;
 	struct dfa *dfa;
+	struct set *new;
 
+	new = newset();
 	/* reset accept state */
 	for (nextmember(NULL); (i = nextmember(accept)) != -1; ) {
 		dfa = &dfastates[i];
@@ -139,20 +141,23 @@ void reset_accept(struct set *accept)
 		accept_stack[top].accept = dfa->acceptstr;
 		dfa->acceptstr = NULL;
 		top++;
-		/* reset accept set */
-		delset(accept, i);
-		addset(accept, dfa->group);
+		/* new accept set */
+		addset(new, dfa->group);
 	}
 
 	/* restore saved accept string */
 	for (i = 0; i < top; i++)
 		dfastates[accept_stack[i].group].acceptstr =
 					accept_stack[i].accept;
+	if (ap)
+		*ap = new;
+	else
+		freeset(new);
 }
 
 
 
-void minimize_dfa(int (*table)[128], struct set *accept)
+void minimize_dfa(int (*table)[128], struct set *accept, struct set **ap)
 {
 	int c, group, n, start_group;
 
@@ -169,10 +174,10 @@ void minimize_dfa(int (*table)[128], struct set *accept)
 		}
 	} while (n < ngroups);
 
-	reset_accept(accept);
+	reset_accept(accept, ap);
 }
 
-void minimize_dfatable(int (*table)[128], int (**ret)[128])
+int minimize_dfatable(int (*table)[128], int (**ret)[128])
 {
 	struct set *group;
 	int (*t)[128];		/* new table */
@@ -208,9 +213,10 @@ void minimize_dfatable(int (*table)[128], int (**ret)[128])
 #ifdef DEBUG_MIN_TABLE
 	dbg(" %d * 128(chars) times", times);
 #endif
+	return (ngroups - sgroup);
 }
 
-void minimize_dfatable2(int (*table)[128], int (**ret)[128])
+int minimize_dfatable2(int (*table)[128], int (**ret)[128])
 {
 	struct set *group;
 	int (*t)[128];		/* new table */
@@ -220,7 +226,7 @@ void minimize_dfatable2(int (*table)[128], int (**ret)[128])
 	int times = 0;
 #endif
 	/* alloc new minimized table */
-	t = xmalloc(MAX_CHARS * ngroups * sizeof(int));
+	t = xmalloc(MAX_CHARS * (ngroups - sgroup) * sizeof(int));
 	/*
 	 * loop hierarchy:
 	 *   Groups --> DFAs --> Chars
@@ -246,6 +252,7 @@ void minimize_dfatable2(int (*table)[128], int (**ret)[128])
 #ifdef DEBUG_MIN_TABLE
 	dbg(" %d * 128(chars) times", times);
 #endif
+	return (ngroups - sgroup);
 }
 
 
