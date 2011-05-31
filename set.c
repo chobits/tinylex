@@ -162,7 +162,7 @@ void addset(struct set *set, int entry)
 
 int emptyset(struct set *set)
 {
-	return !set->used;
+	return set ? !set->used : 1;
 }
 
 /*
@@ -195,12 +195,15 @@ int test_add_set(struct set *set, int entry)
 }
 
 /*
- * temp set stream:
- *    each calling will get next member in @current set stream
- * when @set != @current, reset @current set
+ * Temp Set Stream:
+ *      Each calling will get next member in @current set stream
+ * When @set != @current, reset @current set
  *      @set is NULL, clear @current set stream
+ *
+ * You should not use this method, which is not flexible.
+ * Using startmember(), nextmember() or for_each_member() instead it!
  */
-int nextmember(struct set *set)
+int nextmember2(struct set *set)
 {
 	static struct set *current = NULL;
 	static int member = -1;
@@ -230,7 +233,8 @@ int nextmember(struct set *set)
 	return -1;
 }
 
-int nextmember2(struct set *set)
+/* universal traversal method */
+int nextmember(struct set *set)
 {
 	unsigned int member;
 	member = set->member;

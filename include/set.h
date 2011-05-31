@@ -45,6 +45,6 @@ extern int emptyset(struct set *set);
 
 /* @member is returned member value */
 #define for_each_member(member, set)\
-	for (startmember(set); (member = nextmember2(set)) != -1;)
+	for (startmember(set); (member = nextmember(set)) != -1;)
 
 #endif	/* set.h */

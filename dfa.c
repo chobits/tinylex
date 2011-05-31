@@ -167,9 +167,8 @@ void traverse_dfatable(int (*dfatable)[128], int size, struct set *accept)
 			if (dfatable[i][c] >= size)
 				errexit("dfa table corrupt");
 	}
-	for (nextmember(NULL); (i = nextmember(accept)) != -1; i++) {
+	for_each_member(i, accept)
 		printf(" accept state:%d %s\n", i, dfastates[i].acceptstr);
-	}
 	printf("-====== end debug dfa table ====-\n");
 }
 

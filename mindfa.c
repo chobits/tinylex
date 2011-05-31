@@ -95,12 +95,11 @@ void part_groups(int (*dfatable)[128], int g, int c)
 	group = groups[g];
 	newgrp = -1;
 	/* get first dfa group */
-	nextmember(NULL);
+	startmember(group);
 	dfa = nextmember(group);
 	if (dfa == -1)
 		return;
 	firstgrp = nextdfa = transgroup(dfatable, dfa, c);
-
 	/* loop every dfa in group */
 	while ((dfa = nextmember(group)) != -1) {
 		/* get dfa -- on c --> nextdfa::group */
@@ -132,7 +131,7 @@ void reset_accept(struct set *accept, struct set **ap)
 
 	new = newset();
 	/* reset accept state */
-	for (nextmember(NULL); (i = nextmember(accept)) != -1; ) {
+	for_each_member(i, accept) {
 		dfa = &dfastates[i];
 		if (!dfa->acceptstr)
 			errexit("accept state dfa has no accept string");
@@ -232,7 +231,7 @@ int minimize_dfatable2(int (*table)[128], int (**ret)[128])
 	 *   Groups --> DFAs --> Chars
 	 */
 	for (g = 0; g < ngroups; g++) {
-		nextmember(NULL);
+		startmember(groups[g]);
 		if ((dfa = nextmember(groups[g])) != -1) {
 #ifdef DEBUG_MIN_TABLE
 		times++;
@@ -271,7 +270,7 @@ void debug_group(void)
 	fprintf(stderr, "\n[groups]\n");
 	for (g = sgroup; g < ngroups; g++) {
 		fprintf(stderr, "group:%d dfas:", g);
-		for (nextmember(NULL); (n = nextmember(groups[g])) != -1;)
+		for_each_member(n, groups[g])
 			fprintf(stderr, "%d ", n);
 		fprintf(stderr, "\n");
 	}

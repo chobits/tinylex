@@ -68,7 +68,7 @@ struct set *epsilon_closure(struct set *input, char **accept, int dup)
 	output = dup ? dupset(input) : input;
 
 	/* buffering start state int input */
-	for (nextmember(NULL), state = 0; state < MAXSTACKNFAS; state++) {
+	for (startmember(input), state = 0; state < MAXSTACKNFAS; state++) {
 		start_state[state] = nextmember(input);
 		if (start_state[state] == -1) {
 			state--;
@@ -103,7 +103,7 @@ struct set *epsilon_closure(struct set *input, int *accept, int dup)
 	/* set return value (output set)*/
 	output = dup ? dupset(input) : input;
 	/* push all states in the input set onto nfastack */
-	for (nextmember(NULL); (state = nextmember(input)) != -1; ) {
+	for_each_member(state, input) {
 		nfastack[++top] = statenfa(state);
 		if (top >= MAXSTACKNFAS)
 			errexit("nfa stack overflows");
@@ -154,7 +154,7 @@ struct set *move(struct set *input, int state)
 	struct nfa *nfa;
 	int i;
 
-	for (nextmember(NULL); (i = nextmember(input)) != -1; ) {
+	for_each_member(i, input) {
 		nfa = statenfa(i);
 		if ((nfa->edge == EG_CCL && memberofset(state, nfa->set)) ||
 				(nfa->edge == state)) {
@@ -171,8 +171,7 @@ struct set *move(struct set *input, int state)
 void printstateset(struct set *set)
 {
 	int state;
-	nextmember(NULL);
-	while ((state = nextmember(set)) != -1)
+	for_each_member(state, set)
 		printf("%d ", state);
 	printf("\n");
 }
