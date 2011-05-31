@@ -44,7 +44,6 @@ static void init_dfas(struct nfa *sstate, struct set *acceptset)
 		dfastates[0].acceptstr = accept;
 	}
 
-
 	/* some internal parmaters */
 	ndfas = 1;
 	currentdfa = 0;
@@ -107,8 +106,9 @@ void subsetconstruct(int (*dfatable)[128], struct set *acceptset)
 			else
 				state = add_dfa(next, accept);
 			dfatable[state_dfa(dfa)][c] = state;
+			/* NOTE: using state, not ndfas - 1 */
 			if (accept)
-				addset(acceptset, ndfas - 1);
+				addset(acceptset, state);
 		}
 	}
 }
@@ -145,8 +145,12 @@ int construct_dfa(struct nfa *sstate, int (**table)[], struct set **acceptset)
 	/* return value */
 	if (table)
 		*table = dfatable;
+	else
+		free(dfatable);
 	if (acceptset)
 		*acceptset = accept;
+	else
+		freeset(accept);
 
 	return ndfas;
 }
@@ -160,6 +164,8 @@ void traverse_dfatable(int (*dfatable)[128], int size, struct set *accept)
 			if (dfatable[i][c] >= 0)
 				printf("  %d --> %d on %c\n",
 					i, dfatable[i][c], c);
+			if (dfatable[i][c] >= size)
+				errexit("dfa table corrupt");
 	}
 	for (nextmember(NULL); (i = nextmember(accept)) != -1; i++) {
 		printf(" accept state:%d %s\n", i, dfastates[i].acceptstr);
