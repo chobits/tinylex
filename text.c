@@ -140,7 +140,7 @@ char *text_lookahead(int len)
 
 	if (text_pos + len - 1 >= text_end)
 		text_fill_buf();
-	if (text_eof || text_pos + len - 1 >= text_end)
+	if (text_eof && (text_pos + len - 1 >= text_end))
 		return NULL;
 
 	return text_pos;
@@ -159,6 +159,25 @@ void text_backchar(void)
 int text_lookback(void)
 {
 	return text_pos[-1];
+}
+
+int text_prevline(char **linp)
+{
+	int len = 0;
+	if (text_prev_linetail) {
+		/* Can backed line be usable still? */
+		if (text_prev_lineno == text_lineno + 1) {
+			/* default save for error output */
+			text_save_pos(TEXT_LINE);
+			/* get prev line */
+			text_pos = text_prev_linetail;
+			text_lineno++;
+			text_term(text_pos);
+			len = text_prev_linetail - text_pos;
+		}
+		text_prev_linetail = NULL;
+	}
+	return len;
 }
 
 int text_getline(char **line)
@@ -193,7 +212,7 @@ int text_getline(char **line)
 	text_pos += len + 1;	/* 1 for skipping '\n' */
 	text_term(text_pos);
 
-	return len + 1;
+	return len + 1;		/* contain '\n' char */
 }
 
 /*
@@ -211,25 +230,6 @@ void text_backline(char *line)
 	text_pos = line;
 	text_prev_lineno = text_lineno;
 	text_lineno--;
-}
-
-int text_prevline(char **linp)
-{
-	int len = 0;
-	if (text_prev_linetail) {
-		/* Can backed line be usable still? */
-		if (text_prev_lineno == text_lineno + 1) {
-			/* default save for error output */
-			text_prev_pos = text_pos;
-			len = text_prev_linetail - text_pos;
-			text_save_pos(TEXT_LINE);
-			text_pos = text_prev_linetail;
-			text_lineno++;
-			text_term(text_pos);
-		}
-		text_prev_linetail = NULL;
-	}
-	return len;
 }
 
 void text_open(char *file)
