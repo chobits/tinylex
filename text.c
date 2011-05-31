@@ -97,24 +97,26 @@ static void text_save(void)
 	while (text_pos < text_end)
 		*p++ = *text_pos++;
 	text_pos = TEXT_BUF_START + 1;
-	text_end = p;
+	text_end = p;				/* text_end[0] is invalid */
 }
 
 static void text_fill_buf(void)
 {
 	int n;
+	if (text_eof)
+		return;
 	text_save();
 	n = read(text_fd, text_end, TEXT_BUF_END - text_end);
 	if (n < 0) {
 		errexit("text_fill_buf read error");
 	} else if (n == 0) {
 		text_eof = 1;
-		text_pos = TEXT_BUF_START + 1;
-		text_end = TEXT_BUF_START + 2;
-		*text_pos = EOF;
+		/* safe for text_getline */
+		*text_end = EOF;
 	} else {
 		text_end += n;
 	}
+
 }
 
 char text_getchar(void)
@@ -123,7 +125,7 @@ char text_getchar(void)
 
 	if (text_pos >= text_end)
 		text_fill_buf();
-	if (text_eof)
+	if (text_eof && text_pos >= text_end)
 		return EOF;
 	
 	text_save_pos(TEXT_CHAR);
@@ -167,11 +169,17 @@ int text_getline(char **line)
 	if (len = text_prevline(line))
 		return len;
 
+	/* when EOF, it is safe, because text_end[0] == EOF */
 	while (text_pos[len] != '\n') {
 		if (&text_pos[len] >= text_end)
 			text_fill_buf();
-		if (text_eof)
-			return 0;
+		if (text_eof && &text_pos[len] >= text_end) {
+			if (text_pos >= text_end)
+				return 0;
+			/* for line which has no tailing '\n' */
+			len--;
+			break;
+		}
 		len++;
 	}
 
@@ -235,7 +243,7 @@ void text_open(char *file)
 	/* buf */
 	text_pos = TEXT_BUF_START + 1;	/* skip prev line tail */
 	text_end = TEXT_BUF_START + 1;
-	*text_pos = '\0';		/* for text_getline */
+	*text_pos = TEXT_TERMINAL;	/* for text_getline */
 	text_prev_pos = NULL;
 	/* terminal */
 	text_term_pos = NULL;
