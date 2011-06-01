@@ -17,13 +17,13 @@ static void free_dfas(void)
 	free(dfastates);
 }
 
-static void init_dfas(struct nfa *sstate, struct set *acceptset)
+static void init_dfas(struct nfa *sstate)
 {
 	struct set *first;
 	int i;
-	char *accept;
+	/* alloc dfa buffer */
 	dfastates = xmalloc(MAX_DFAS * sizeof(struct dfa));
-	/* others */
+	/* init dfas */
 	for (i = 0; i < MAX_DFAS; i++) {
 		dfastates[i].group = -1;
 		dfastates[i].states = NULL;
@@ -37,12 +37,8 @@ static void init_dfas(struct nfa *sstate, struct set *acceptset)
 	 */
 	first = newset();
 	addset(first, nfastate(sstate));
-	epsilon_closure(first, &accept, 0);
+	epsilon_closure(first, NULL, 0);
 	dfastates[0].states = first;
-	if (accept) {
-		addset(acceptset, 0);
-		dfastates[0].acceptstr = accept;
-	}
 
 	/* some internal parmaters */
 	ndfas = 1;
@@ -134,7 +130,7 @@ int construct_dfa(struct nfa *sstate, int (**table)[], struct set **acceptset)
 	 * init internal dfa auxiliary method,
 	 *  which is used in subsetconstruct()
 	 */
-	init_dfas(sstate, accept);
+	init_dfas(sstate);
 
 	/* subset construction */
 	subsetconstruct(dfatable, accept);
