@@ -90,13 +90,17 @@ struct set *epsilon_closure(struct set *input, char **accept, int dup)
 /*
  * stack implemented computation for epsilon closure set from input
  */
-struct set *epsilon_closure(struct set *input, int *accept, int dup)
+struct set *epsilon_closure(struct set *input, char **accept, int dup)
 {
 	struct nfa *nfastack[MAXSTACKNFAS];
 	struct nfa *nfa;
 	int top = -1, state;
 	struct set *output;
 	int i;
+
+	/* init accpet state */
+	if (accept)
+		*accept = NULL;
 
 	if (!input)
 		return NULL;
@@ -109,9 +113,6 @@ struct set *epsilon_closure(struct set *input, int *accept, int dup)
 			errexit("nfa stack overflows");
 	}
 
-	/* init accpet state */
-	if (accept)
-		*accept = MAX_INT;
 	/* real handling */
 	while (top >= 0) {
 		nfa = nfastack[top--];
@@ -131,12 +132,9 @@ struct set *epsilon_closure(struct set *input, int *accept, int dup)
 					errexit("nfa stack overflows");
 			}
 		}
-		if (!nfa->next[0] && accept && nfastate(nfa) < *accept)
-			*accept = nfastate(nfa);
+		if (!nfa->next[0] && accept)
+			*accept = nfa->accept;
 	}
-	/* if not changed */
-	if (accept && *accept == MAX_INT)
-		*accept = -1;
 	return output;
 }
 
