@@ -55,10 +55,13 @@ void delset(struct set *set, int entry)
 {
 	if (entry > set->nbits)
 		return;
-	if (set->compl)
+	if (set->map[CELLS(entry)] & (1 << CELL_BIT(entry))) {
+		if (!set->compl) {
+			set->map[CELLS(entry)] &= ~(1 << CELL_BIT(entry));
+			set->used--;
+		}
+	} if (set->compl)
 		set->map[CELLS(entry)] |= 1 << CELL_BIT(entry);
-	else
-		set->map[CELLS(entry)] &= ~(1 << CELL_BIT(entry));
 }
 
 /* duplicate @orignal set */

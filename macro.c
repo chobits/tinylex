@@ -22,7 +22,7 @@ struct macro *lookup_hash_macro(char *name, unsigned int hash)
 {
 	struct macro *macro;
 	list_for_each_entry(macro, tbl(hash), list) {
-		/* find */
+		/* Macro is found. */
 		if (strcmp(macro->name, name) == 0)
 			return macro;
 	}
@@ -48,6 +48,10 @@ struct macro *new_macro(char *name, char *text)
 	return macro;
 }
 
+/* 
+ * The macro line lenth is valid! (3 < len < 256)
+ * And the line tail has no newline.
+ */
 struct macro *make_macro(char *line, int len)
 {
 	struct macro *macro;
@@ -55,14 +59,6 @@ struct macro *make_macro(char *line, int len)
 	char macrotext[128];
 	int i, k, inquato = 0;
 	unsigned int hash;
-
-	if (len > 256)
-		text_errx("Format macro is invalid: macro is large");
-	/* elimite tail newline */
-	if (line[len - 1] == '\n') {
-		line[len - 1] = '\0';
-		len--;
-	}
 
 	/* get macro name */
 	for (k = i = 0; i < len; i++, k++) {
@@ -80,7 +76,7 @@ struct macro *make_macro(char *line, int len)
 
 	/* get macro text */
 	for (k = 0, inquato = 0; i < len; i++, k++) {
-		/* "..<blank>.." is valid */
+		/* "..{blank}.." is valid */
 		if (isblank(line[i]) && !inquato)
 			break;
 		/* text reserve quota `"`. */
@@ -89,7 +85,7 @@ struct macro *make_macro(char *line, int len)
 		macrotext[k] = line[i];
 	}
 	macrotext[k] = '\0';
-	if (inquato || !isspaceline(&line[i]))
+	if (inquato || (i < len && !isspaceline(&line[i])))
 		text_errx("Format macro is invalid");
 
 	/* check whether this macro is already in macor table */
@@ -108,6 +104,7 @@ struct macro *make_macro(char *line, int len)
 
 void add_macro_table(struct macro *macro)
 {
+	/* not add existed macro */
 	if (list_empty(&macro->list))
 		list_add(&macro->list, tbl(macro->hash));
 }
@@ -118,15 +115,30 @@ void add_macro_table(struct macro *macro)
 void add_macro(char *line, int len)
 {
 	struct macro *macro;
-	/* check */
+	int macrolen = len;
+	/* check macro format: ^macroname macrotext */
 	if (isspace(*line)) {
 		if (isspaceline(line))
 			return;
 		else
-			text_errx("Format macro is invalid");
+			text_errx("Macro is invalid: redundant space");
+	}
+	/* `xy z` is shortest macro line */
+	if (len < 4)
+		text_errx("Macro is invalid: macro line is too short");
+	if (len > 256)
+		text_errx("Macro is invalid: macro line is too long");
+	/* elimite tail newline */
+	if (line[len - 1] == '\n') {
+		line[len - 1] = '\0';
+		macrolen = len - 1;
 	}
 	/* make it */
-	macro = make_macro(line, len);
+	macro = make_macro(line, macrolen);
+	/* restore the elimited newline */
+	if (macrolen < len)
+		line[len - 1] = '\n';
+	
 	/* add it to hash table */
 	add_macro_table(macro);
 	dbg("add macro hash:%8x name:%s text:%s",

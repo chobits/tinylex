@@ -191,7 +191,7 @@ int main(int argc, char **argv)
 		errexit("ARGC != 2");
 
 	/* init token stream: interpreting regular expression */
-	fileopen(argv[1]);
+	text_open(argv[1]);
 	/* construct NFA from regular expression */
 	init_nfa_buffer();
 	nfa = machine();

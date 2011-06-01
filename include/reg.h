@@ -12,7 +12,6 @@
 #define MAX_INT ((~(0U)) >> 1)
 
 extern void errexit(char *);
-extern void fileopen(char *);
 extern struct regnode *interpret(void);
 
 #endif

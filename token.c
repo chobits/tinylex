@@ -81,13 +81,13 @@ static const int tokenmap[128] = {
 /* 0    '\0'    SOH     STX     ETX     ENQ     ACK     '\a'    '\b' */
 	L,	L,	L,	L,	L,	L,	L,	L,
 /* 8    '\b'    '\t'    '\n'    '\v'    '\f'    '\r'    SO      SI   */
-	L,	L,	EOL,	L,	L,	L,	L,	L,
+	L,	SPACE,	EOL,	SPACE,	L,	L,	L,	L,
 /* 16   DLE     DC1     DC2     DC3     DC4     NAK     SYN     ETB  */
 	L,	L,	L,	L,	L,	L,	L,	L,
 /* 24   CAN     EM      SUB     ESC     FS      GS      RS      US   */
 	L,	L,	L,	L,	L,	L,	L,	L,
 /* 32   ' '     !       "       #       $       %       &       '    */
-	L,	L,	L,	L,	DOLLAR,	L,	L,	L,
+	SPACE,	L,	L,	L,	DOLLAR,	L,	L,	L,
 /* 40   (       )       *       +               -       .       ´    */
 	LP,	RP,	AST,	ADD,	L,	DASH,	DOT,	L,
 /* 48   0       1       2       3       4       5       6       7    */
@@ -127,25 +127,17 @@ restart:
 		goto restart;
 	}
 
-	/* hansle {macro} */
+	/* handle {macro} */
 	if (c == '{' && !inquota) {
 		token_expand_macro();
 		goto restart;
 	}
 
 	type = L;
-	switch (c) {
-	case '\t':
-	case ' ':
-		type = EORE;
-		break;
-	case EOF:
+	if (c == EOF)
 		type = _EOF;
-		break;
-	default:
+	else
 		type = tokenmap[c];
-		break;
-	}
 	mark_end();
 	if (inquota)
 		type = L;
@@ -161,11 +153,6 @@ void back_token(void)
 		text_backchar();
 }
 
-void fileopen(char *path)
-{
-	text_open(path);
-}
-
 #ifdef TOKEN_TEST
 
 int main(int argc, char **argv)
@@ -174,16 +161,13 @@ int main(int argc, char **argv)
 
 	/* init */
 	if (argc == 2)
-		fileopen(argv[1]);
+		text_open(argv[1]);
 
 	parse_cheader();
 	parse_macro();
 
 	while ((type = get_token()) != _EOF) {
 		switch (type) {
-		case EORE:
-			printf("[EORE]");
-			break;
 		case DOT:
 			printf("[DOT]");
 			break;

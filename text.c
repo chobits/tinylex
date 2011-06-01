@@ -132,6 +132,7 @@ char text_getchar(void)
 	return *text_pos++;
 }
 
+/* look ahead @len chars */
 char *text_lookahead(int len)
 {
 	if (len < 1)

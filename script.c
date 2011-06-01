@@ -12,9 +12,7 @@ static int part = 0;		/* current handing part */
 
 int ispartend(char *line)
 {
-	if (line[0] == '%' && line[1] == '%')
-		return 1;
-	return 0;
+	return (line[0] == '%' && line[1] == '%') ? 1 : 0;
 }
 
 void parse_errx(char *str)
@@ -56,7 +54,7 @@ void parse_cheader(void)
 	part = 1;
 
 	len = get_valid_line(&line);
-	/* ignore `%{` or `}%` line tail */
+	/* ignore other chars of `%{` or `}%` line */
 	/* start code: `%{` */
 	if (line[0] == '%' && line[1] == '{') {
 		while (len = text_getline(&line)) {
@@ -70,7 +68,7 @@ void parse_cheader(void)
 		if (!len)
 			parse_errx("no header end code: }% ");
 	} else if (ispartend(line)) {
-		/* `%%` means part end */
+		/* `%%` means part end, which skip macro definition phase */
 		part = 2;
 	} else {
 		/* save line for macro handing */
@@ -175,7 +173,7 @@ void parse_script(void)
 {
 	/* prehandle */
 	/* part1: */
-		// option handling
+	/* TODO:option handling */
 	parse_cheader();
 	parse_macro();
 	/* part2: */

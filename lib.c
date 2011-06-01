@@ -20,6 +20,7 @@ void *xmalloc(size_t size)
 /* detect whether the line consists of all white space */
 int isspaceline(char *line)
 {
+	/* {spaces}\n\0 and {spaces}\0 are space line */
 	while (*line && isspace(*line))
 		line++;
 	return (*line) ? 0 : 1;

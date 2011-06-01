@@ -19,9 +19,8 @@ typedef enum tokens {
 	DOLLAR,		/* `$`  */
 	CC,		/* not real token: concatenation */
 	L,		/* lexeme */
-	EORE,		/* end of regular expression */
 	EOL,		/* end of line: \n */
-	EOP,		/* end of part: %% */
+	SPACE,		/* space tab */
 	_EOF		/* end of file */
 } token_t;
 

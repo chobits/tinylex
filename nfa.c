@@ -104,6 +104,7 @@ struct nfa *allocnfa(void)
 
 static token_t current = NIL;
 
+/* the yytext is valid when match return 1 */
 int match(token_t type)
 {
 	current = get_token();
@@ -184,15 +185,22 @@ void parentheses(struct nfa **start, struct nfa **end)
 }
 
 /*
- * handle: string | char1 - char2 | epsilon
+ * do_dash -> ^ | epsilon | chars | char-char
  */
 void do_dash(struct nfa *nfa)
 {
-	int prev = 0, i;
+	int prev = 0, compl = 0, i;
+
 	ENTER();
-	/* epsilon */
+	/* uparrow ^ */
+	if (match(UPA)) {	/* [^ ... ] */
+		advance();	/* not set anchor field here */
+		compl = 1;
+	}
+
+	/* TODO:epsilon */
 	if (match(RSB))
-		return;
+		text_errx("cannot handling [^] or []");
 
 	if (!nfa->set)
 		nfa->set = newset();
@@ -208,19 +216,18 @@ void do_dash(struct nfa *nfa)
 			}
 			prev = 0;
 		} else {
-			prev = *yytext;
 			advance();
+			prev = *yytext;
 			addset(nfa->set, prev);
 		}
 	}
+	if (compl)
+		complset(nfa->set);
 	LEAVE();
 }
 
 /*
- * squarebrackets -> [^ string ]
- *                |  [  string ]
- *                |  [^]
- *                |  []
+ * squarebrackets -> [ do_dash ]
  *                |  .
  *                |  parentheses
  */
@@ -233,9 +240,6 @@ void squarebrackets(struct nfa **start, struct nfa **end)
 		*end = allocnfa();
 		(*start)->next[0] = *end;
 		(*start)->edge = EG_CCL;
-		/* uparrow ^ */
-		if (match(UPA))	/* [^ ... ] */
-			advance();	/* not set anchor field here */
 
 		/*  epsilon or string */
 		do_dash(*start);
@@ -276,8 +280,8 @@ int cc_first_set(void)
 	case OR:	/* | */
 	case _EOF:	/* EOF */
 	case EOL:
-	case EORE:
 	case DOLLAR:	/* $ */
+	case SPACE:	/* space or tab */
 		return 0;
 		break;
 	case DASH:	/* - */
@@ -310,6 +314,8 @@ void regor(struct nfa **start, struct nfa **end)
 	while (cc_first_set()) {
 		concatenation(&istart, &iend);
 		memcpy(*end, istart, sizeof(*istart));
+		/* free overlaping nfa */
+		istart->accept = NULL;
 		freenfa(istart);
 		/* update new end */
 		*end = iend;
@@ -396,13 +402,20 @@ void action(struct nfa *end)
 
 	/* `{ string }` */
 	if (match(LCP)) {
-		/* FIXME: support { string } */
+		/* 
+		 * TODO: support { string } 
+		 * Should I need a C parser?
+		 */
 		errexit("not support { string }");
 	} else {
 		len = text_getline(&line);
-		if (len == 1)
+		/* Should it happen? */
+		if (len <= 1)
 			errexit("error new line");
 		end->accept = strdup(line);
+		/* elimite tail newline */
+		if (end->accept[len - 1] == '\n')
+			end->accept[len - 1] = '\0';
 	}
 	LEAVE();
 }
@@ -448,14 +461,14 @@ int matchendpart(void)
 		return 0;
 	/* skip first `%` for andvance() in machine() */
 	advance();
-	if (!match(L) || *yytext != '%')
+	if (!match(L) || *yytext != '%')	/* second % */
 		text_errx("match end part `\%\%` error");
 	return 1;
 }
 
 /*
- * machine -> <spaceline> rule machine
- *          | <spaceline> rule EOP
+ * machine -> rule <spaceline> machine
+ *          | rule <spaceline> EOP
  */
 struct nfa *machine(void)
 {
@@ -594,7 +607,7 @@ int main(int argc, char **argv)
 {
 	struct nfa *nfa;
 	if (argc == 2)
-		fileopen(argv[1]);
+		text_open(argv[1]);
 	init_nfa_buffer();
 	nfa = machine();
 	traverse_nfa(nfa);
