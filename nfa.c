@@ -108,7 +108,8 @@ static token_t current = NIL;
 int match(token_t type)
 {
 	current = get_token();
-	back_token();
+	if (current != _EOF)
+		back_token();
 	return (current == type);
 }
 
@@ -128,15 +129,16 @@ void matched(token_t type)
 void terminal(struct nfa **start, struct nfa **end)
 {
 	ENTER();
+
 	/* at least one terminal */
 	if (match(L)) {
+		advance();
 		/* real allocing for NFA */
 		*start = allocnfa();
 		*end = allocnfa();
 		(*start)->next[0] = *end;
 		/* get terminal symbol */
 		(*start)->edge = *yytext;
-		advance();
 	} else {
 		errexit("not matched TERMINAL");
 	}
@@ -274,7 +276,8 @@ void concatenation(struct nfa **start, struct nfa **end)
 int cc_first_set(void)
 {
 	current = get_token();
-	back_token();
+	if (current != _EOF)
+		back_token();
 	switch (current) {
 	/* concatenation follow set */
 	case RP:	/* ) */
@@ -397,7 +400,8 @@ void regexp(struct nfa **startp, struct nfa **endp)
 }
 
 /*
- * action -> epsilon | one-line string(EOL) | { string } space EOL
+ * action -> one-line string(EOL) | { string } space EOL | epsilon
+ *        |  one-line string(_EOF) | { string } space _EOF
  */
 void action(struct nfa *end)
 {
@@ -405,7 +409,7 @@ void action(struct nfa *end)
 	int len;
 	ENTER();
 	/* epsilon */
-	if (match(EOL)) {
+	if (match(EOL) || match(_EOF)) {
 		end->accept = emptyaction;
 		advance();
 		return;
@@ -413,8 +417,8 @@ void action(struct nfa *end)
 
 	/* `{ string }` */
 	if (match(LCP)) {
-		/* 
-		 * TODO: support { string } 
+		/*
+		 * TODO: support { string }
 		 * Should I need a C parser?
 		 */
 		errexit("not support { string }");
@@ -433,7 +437,7 @@ void action(struct nfa *end)
 
 /*
  * specail handle: skip blank char(space or tab),
- *                 not using token stream 
+ *                 not using token stream
  */
 void space(void)
 {
@@ -460,9 +464,9 @@ struct nfa *rule(void)
 	return start;
 }
 
-/* 
+/*
  * specail handle: match partend `%%`,
- *                 not using token stream 
+ *                 not using token stream
  */
 int matchendpart(void)
 {
