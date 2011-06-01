@@ -168,7 +168,7 @@ void closure(struct nfa **start, struct nfa **end)
 
 extern void regstr(struct nfa **, struct nfa **);
 /*
- * parentheses -> ( regular ) | <terminal>
+ * parentheses -> ( regstr ) | <terminal>
  * NOTE: `( epsilon )` is error!
  */
 void parentheses(struct nfa **start, struct nfa **end)
@@ -276,6 +276,7 @@ int cc_first_set(void)
 	current = get_token();
 	back_token();
 	switch (current) {
+	/* concatenation follow set */
 	case RP:	/* ) */
 	case OR:	/* | */
 	case _EOF:	/* EOF */
@@ -284,18 +285,28 @@ int cc_first_set(void)
 	case SPACE:	/* space or tab */
 		return 0;
 		break;
+	/* concatenation first set */
+	case LSB:	/* [ */
+	case DOT:	/* . */
+	case LP:	/* ( */
+	case L:		/* lexeme */
+		return 1;
+		break;
 	case DASH:	/* - */
 	case ADD:	/* + */
 	case AST:	/* * */
 	case QST:	/* ? */
 	case RSB:	/* ] */
 	case UPA:	/* ^ */
+	case LCP:	/* { */
+	case RCP:	/* } */
 		errexit("not matched concatenation");
-		return 0;
 		break;
 	default:
+		errexit("Unrecognized token");
 		break;
 	}
+	/* dummy return value */
 	return 1;
 }
 
@@ -325,7 +336,7 @@ void regor(struct nfa **start, struct nfa **end)
 
 /*
  * regstr -> regor OR regstr
- *      | regor
+ *         | regor
  */
 void regstr(struct nfa **start, struct nfa **end)
 {
