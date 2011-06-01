@@ -17,9 +17,9 @@ typedef int ROW[MAX_CHARS];
 
 struct dfa {
 	struct set *states;	/* nfa states */
-	int group;
+	int group;		/* used for dfa minization */
 	int accept;
-	char *acceptstr;
+	char *acceptstr;	/* accept action string */
 };
 
 extern int ngroups;

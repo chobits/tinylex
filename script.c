@@ -101,11 +101,13 @@ void parse_prepare_regexp(void)
 	char *p;
 	if (skip_whitespace() == EOF)
 		text_errx("part2 && part3 is empty");
-	/* `%%\n` */
-	p = text_lookahead(3);
+	/* here, we can lookahead at least one char */
+	/* `%%` */
+	p = text_lookahead(2);
+	/* `x` */
 	if (!p)
-		text_errx("part2 is too small");
-	if (ispartend(p))
+		text_err("small part2");
+	if (p && ispartend(p))
 		text_errx("part2 is empty");
 }
 
