@@ -189,14 +189,14 @@ static int lineno;
 int grep(char *line, struct nfa *nfa, char **endstr)
 {
 	struct set *start, *end;
-	int accept, prevaccept;
+	char *accept, *prevaccept;
 	int c, buflen;
 	char *buf, *bufpos;
 
 
 	/* init accept state */
-	accept = -1;
-	prevaccept = -1;
+	accept = NULL;
+	prevaccept = NULL;
 
 	/* init start state set */
 	start = newset();
@@ -208,16 +208,16 @@ int grep(char *line, struct nfa *nfa, char **endstr)
 	buflen = strlen(buf);
 	bufpos = buf;
 
-	/* matching: non-greedy algorithm */
+	/* matching: greedy algorithm */
 	while (c = *bufpos) {
 		end = move(start, c);
 		if (!end)
 			break;
 		end = epsilon_closure(end, &accept, 0);
 
-		if (accept >= 0) {
+		if (accept) {
 			prevaccept = accept;
-			accept = -1;
+			accept = NULL;
 		}
 
 		/* for next loop */
@@ -231,7 +231,7 @@ int grep(char *line, struct nfa *nfa, char **endstr)
 	if (end)
 		freeset(end);
 	/* output matched string */
-	if (prevaccept >= 0) {
+	if (prevaccept) {
 		if (endstr)
 			*endstr = bufpos;
 		return 1;
@@ -256,7 +256,7 @@ int main(int argc, char **argv)
 	parse_cheader();
 	parse_macro();
 	/* construct NFA from regular expression */
-        skip_whitespace();
+	parse_prepare_regexp();
 	init_nfa_buffer();
 	nfa = machine();
 

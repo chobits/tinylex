@@ -2,7 +2,8 @@ OBJS	= tinylex nfa egrep_like dfatable set mindfa text nfa token
 CC	= gcc
 CLFAGS	= -Iinclude
 
-all:tinylex set text
+all:tinylex egrep_like
+debug:set text
 mindfa:mindfa.c dfa.c interpret.c nfa.c token.c lib.c set.c text.c macro.c
 	$(CC) $(CLFAGS) -DDEBUG -DDEBUG_MIN_TABLE -DMIN_DFA_TEST $^ -o $@
 dfatable:dfa.c interpret.c nfa.c token.c lib.c set.c text.c macro.c
@@ -20,13 +21,14 @@ GREPOBJS	=	\
 	macro.c		\
 	mindfa.c	\
 	nfa.c		\
-	lib.c	\
-	token.c	\
+	lib.c		\
+	token.c		\
 	script.c	\
 	set.c		\
-	text.c
+	text.c		\
+	compressdfa.c
 
-TLOBJS	= $(GREPOBJS) main.c compressdfa.c
+TLOBJS	= $(GREPOBJS) main.c 
 
 tinylex:$(TLOBJS)
 	$(CC) $(CLFAGS) -DDEBUG -DDEBUG_MIN_TABLE $^ -o $@

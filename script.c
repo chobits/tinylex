@@ -22,7 +22,7 @@ void parse_errx(char *str)
 }
 
 /* get a valid line, skip blank line and space-starting line */
-int get_valid_line(char **linp)
+int parse_getline(char **linp)
 {
 	char *line;
 	int len;
@@ -53,7 +53,7 @@ void parse_cheader(void)
 	/* set current part */
 	part = 1;
 
-	len = get_valid_line(&line);
+	len = parse_getline(&line);
 	/* ignore other chars of `%{` or `}%` line */
 	/* start code: `%{` */
 	if (line[0] == '%' && line[1] == '{') {
