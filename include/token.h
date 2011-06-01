@@ -17,7 +17,6 @@ typedef enum tokens {
 	DASH,		/* `-`  */
 	UPA,		/* `^`  up arrow anchor */
 	DOLLAR,		/* `$`  */
-	CC,		/* not real token: concatenation */
 	L,		/* lexeme */
 	EOL,		/* end of line: \n */
 	SPACE,		/* space tab */
