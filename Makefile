@@ -23,7 +23,7 @@ GREPOBJS	=	\
 TLOBJS	= $(GREPOBJS) main.c
 
 #
-#last program: tinylex
+#final program: tinylex
 #
 tinylex:$(TLOBJS)
 	$(CC) $(CLFAGS) $^ -o $@
