@@ -1,12 +1,60 @@
 #include <stdio.h>
+#include <unistd.h>
 #include <lib.h>
+
+static char *script = NULL;
+static char *lexpart = NULL;
+static char *codefile = NULL;
+
+void version(void)
+{
+	fprintf(stderr, "tinylex (TINYLEX) 0.0.0 20110607\n\n");
+	exit(0);
+}
+
+void usage(void)
+{
+	fprintf(stderr,
+		"USAGE: tinylex script [-o outputfile]\n");
+	exit(EXIT_FAILURE);
+}
+
+void parse_args(int argc, char **argv)
+{
+	int i;
+	char opt;
+	if (argc < 2)
+		usage();
+	opterr = 0;
+	while ((opt = getopt(argc, argv, "o:hv")) != -1) {
+		switch (opt) {
+		case 'o':
+			if (codefile)
+				usage();
+			codefile = optarg;
+			break;
+		case 'h':
+			usage();
+			break;
+		case 'v':
+			version();
+			break;
+		default:
+			usage();
+			break;
+		}
+	}
+	if (optind >= argc)
+		errexit("no script file");
+
+	script = argv[optind];
+}
 
 int main(int argc, char **argv)
 {
-	if (argc != 2)
-		errexit("ARGC != 2");
-
-	open_script(argv[1]);
+	parse_args(argc, argv);
+	open_script(script);
+	code_open(codefile, lexpart);
 	parse_script();
 	return 0;
 }

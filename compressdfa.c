@@ -2,22 +2,66 @@
 #include <lib.h>
 #include <set.h>
 
-int equal_col(int *table, int nrows, int ncols, int col1, int col2)
+/* comp_table[com_rows][com_cols] */
+static int *com_table;
+static int com_rows;
+static int com_cols;
+/* row_map[nrows] */
+static int *row_map;
+static int nrows;
+/* col_map[ncols] */
+static int *col_map;
+static int ncols;
+
+void print_array(FILE *fp, int *array, int size, int col)
 {
 	int i;
-	for (i = 0; i < nrows; i++)
-		if (table[col1 + ncols * i] != table[col2 + ncols * i])
-			return 0;
-	return 1;
+	for (i = 0; i < size; i++) {
+		fprintf(fp, "%4d,", array[i]);
+		if (i % col == col - 1)
+			fprintf(fp, "\n");
+	}
+	if (i % col)
+		fprintf(fp, "\n");
 }
 
-int equal_row(int *table, int nrows, int ncols, int row1, int row2)
+void print_row_map(FILE *fp)
+{
+	fprintf(fp, "static int row_map[%d] = {\n", nrows);
+	print_array(fp, row_map, nrows, 8);
+	fprintf(fp, "};\n");
+}
+
+void print_col_map(FILE *fp)
+{
+	fprintf(fp, "static int col_map[%d] = {\n", ncols);
+	print_array(fp, col_map, ncols, 8);
+	fprintf(fp, "};\n");
+}
+
+void print_table(FILE *fp, int rowchars)
 {
 	int i;
-	for (i = 0; i < ncols; i++)
-		if (table[row1 * ncols + i] != table[row2 * ncols + i])
-			return 0;
-	return 1;
+	fprintf(fp, "static int com_table[%d][%d] = {\n", com_rows, com_cols);
+	for (i = 0; i < com_rows * com_cols; i++) {
+		fprintf(fp, "%5d,", com_table[i]);
+		if (i % rowchars == rowchars - 1)
+			fprintf(fp, "\n");
+	}
+	if (i % rowchars)
+		fprintf(fp, "\n");
+	fprintf(fp, "};\n");
+}
+
+void print_redundant_table(FILE *fp)
+{
+	fprintf(fp, "\n");
+	print_row_map(fp);
+	fprintf(fp, "\n");
+	print_col_map(fp);
+	fprintf(fp, "\n");
+	print_table(fp, 8);
+	fprintf(fp, "\n");
 }
 
 void redundant_compress_debug(int *origtbl, int origrows, int origcols,
@@ -26,6 +70,7 @@ void redundant_compress_debug(int *origtbl, int origrows, int origcols,
 {
 	int i, k;
 
+	
 	/* compressed table */
 	printf("redundant compressed table:\n");
 	for (i = 0; i < rows; i++) {
@@ -50,20 +95,41 @@ void redundant_compress_debug(int *origtbl, int origrows, int origcols,
 			if (origtbl[i * origcols + k] !=
 				table[row_map[i] * cols + col_map[k]])
 				errexit("redundant compressed table corrupts");
+}
 
+int equal_col(int *table, int nrows, int ncols, int col1, int col2)
+{
+	int i;
+	for (i = 0; i < nrows; i++)
+		if (table[col1 + ncols * i] != table[col2 + ncols * i])
+			return 0;
+	return 1;
+}
+
+int equal_row(int *table, int nrows, int ncols, int row1, int row2)
+{
+	int i;
+	for (i = 0; i < ncols; i++)
+		if (table[row1 * ncols + i] != table[row2 * ncols + i])
+			return 0;
+	return 1;
 }
 
 /*
  * clear implementation, but its performance is not good
  * alloc a new compressed table according to orignal table
+ *
+ * RETURN:
+ * 	@ctable     compressed table
+ * 	@cmap       column map
+ * 	@rmap       row map
+ * 	@crow       compressed table row
+ * 	@ccol       compressed table column
  */
-void redundant_compress(int (*table)[MAX_CHARS], int nrows, int ncols)
+void redundant_compress(int (*table)[MAX_CHARS])
 {
 	struct set *col_set, *row_set;
-	int *col_map;
-	int *row_map;
-	int *com_table;
-	int com_cols, com_rows, row, col;
+	int row, col;
 	int i, k;
 
 	/* compress columns */
@@ -83,7 +149,7 @@ void redundant_compress(int (*table)[MAX_CHARS], int nrows, int ncols)
 		}
 	}
 
-	/* 
+	/*
 	 * compress rows
 	 * the algorithm is the same as columns compression
 	 */
@@ -93,7 +159,7 @@ void redundant_compress(int (*table)[MAX_CHARS], int nrows, int ncols)
 		for (k = 0; k < i; k++) {
 			/* some redundant column entry is still compared */
 			if (equal_row((int *)table, nrows, ncols, k, i)) {
-				row_map[i] = row_map[k];	
+				row_map[i] = row_map[k];
 				break;
 			}
 		}
@@ -105,7 +171,7 @@ void redundant_compress(int (*table)[MAX_CHARS], int nrows, int ncols)
 
 	/* build compressed table */
 	com_table = xmalloc(com_rows * com_cols * sizeof(int));
-	printf(" %d * %d\n", com_rows, com_cols);
+	printf("compress table: %d * %d\n", com_rows, com_cols);
 	col = 0;
 	for_each_member(i, col_set) {
 		row = 0;
@@ -122,13 +188,15 @@ void redundant_compress(int (*table)[MAX_CHARS], int nrows, int ncols)
 	/* check rows and cols */
 	if ((row != com_rows) && (col != com_cols))
 		errexit("error rows or cols of redundant compressed table");
-	
+
 	printf("\n");
 	redundant_compress_debug((int *)table, nrows, ncols,
 				com_table, com_rows, com_cols, row_map, col_map);
 }
 
-void compress_dfatable(int (*table)[MAX_CHARS], int rows, int cols)
+void compress_dfatable(int (*table)[MAX_CHARS], int row, int col)
 {
-	redundant_compress(table, rows, cols);
+	nrows = row;
+	ncols = col;
+	redundant_compress(table);
 }

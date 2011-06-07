@@ -11,7 +11,7 @@
 #ifdef RECURSION_EPSILON_CLOSURE
 
 /*  real recursion computation function */
-void e_closure(struct nfa *nfa, struct set *stateset, char **accept)
+void e_closure(struct nfa *nfa, struct set *stateset, struct accept **acp)
 {
 	int state;
 	if (!nfa)
@@ -22,19 +22,19 @@ void e_closure(struct nfa *nfa, struct set *stateset, char **accept)
 	if (!nfa->next[0]) {
 		if (!nfa->accept)
 			errexit("no accept action string");
-		if (accept)
-			*accept = nfa->accept;
+		if (acp)
+			*acp = nfa->accept;
 	}
 
 	if (nfa->edge == EG_EPSILON) {
 		/* next 0 */
 		if (nfa->next[0] &&
 			!test_add_set(stateset, nfastate(nfa->next[0])))
-			e_closure(nfa->next[0], stateset, accept);
+			e_closure(nfa->next[0], stateset, acp);
 		/* next 1 */
 		if (nfa->next[1] &&
 			!test_add_set(stateset, nfastate(nfa->next[1])))
-			e_closure(nfa->next[1], stateset, accept);
+			e_closure(nfa->next[1], stateset, acp);
 	}
 }
 
@@ -48,7 +48,7 @@ void e_closure(struct nfa *nfa, struct set *stateset, char **accept)
  *
  * input only contains sstate
  */
-struct set *epsilon_closure(struct set *input, char **accept, int dup)
+struct set *epsilon_closure(struct set *input, struct accept **acp, int dup)
 {
 	int start_state[MAXSTACKNFAS];
 	int state;
@@ -58,8 +58,8 @@ struct set *epsilon_closure(struct set *input, char **accept, int dup)
 	 * We cannot using e_closure(nfa, output),
 	 * because sstate is already in output.
 	 */
-	if (accept)
-		*accept = NULL;
+	if (acp)
+		*acp = NULL;
 
 	if (!input)
 		return NULL;
@@ -80,7 +80,7 @@ struct set *epsilon_closure(struct set *input, char **accept, int dup)
 		errexit("state stack overflows");
 	/* computing epsilon closure of every start state in input set */
 	for (; state >= 0; state--)
-		e_closure(statenfa(start_state[state]), output, accept);
+		e_closure(statenfa(start_state[state]), output, acp);
 
 	return output;
 }
@@ -90,7 +90,7 @@ struct set *epsilon_closure(struct set *input, char **accept, int dup)
 /*
  * stack implemented computation for epsilon closure set from input
  */
-struct set *epsilon_closure(struct set *input, char **accept, int dup)
+struct set *epsilon_closure(struct set *input, struct accept **acp, int dup)
 {
 	struct nfa *nfastack[MAXSTACKNFAS];
 	struct nfa *nfa;
@@ -98,9 +98,9 @@ struct set *epsilon_closure(struct set *input, char **accept, int dup)
 	struct set *output;
 	int i;
 
-	/* init accpet state */
+	/* init accpet */
 	if (accept)
-		*accept = NULL;
+		*acp = NULL;
 
 	if (!input)
 		return NULL;
@@ -132,8 +132,10 @@ struct set *epsilon_closure(struct set *input, char **accept, int dup)
 					errexit("nfa stack overflows");
 			}
 		}
-		if (!nfa->next[0] && accept)
-			*accept = nfa->accept;
+		if (!nfa->next[0]) {
+			if (acp)
+				*acp = nfa->accept;
+		}
 	}
 	return output;
 }
@@ -187,7 +189,7 @@ static int lineno;
 int grep(char *line, struct nfa *nfa, char **endstr)
 {
 	struct set *start, *end;
-	char *accept, *prevaccept;
+	struct accept *accept, *prevaccept;
 	int c, buflen;
 	char *buf, *bufpos;
 
@@ -266,7 +268,7 @@ int main(int argc, char **argv)
 	/* grep */
 	lineno = 0;
 	while (fgets(line + 1, 255, f)) {
-		line[0] = '\n';		/* prev line tail */
+		line[0] = '\n';	/* prev line tail for start anchor `^` */
 		lineno++;
 		lp = line;
 		ep = NULL;

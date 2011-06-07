@@ -6,7 +6,8 @@
 #include <lib.h>
 
 /* dfa sets auxiliary function */
-int currentdfa, ndfas;
+static int currentdfa;
+int ndfas;
 struct dfa *dfastates = NULL;
 
 static void free_dfas(void)
@@ -27,8 +28,7 @@ static void init_dfas(struct nfa *sstate)
 	for (i = 0; i < MAX_DFAS; i++) {
 		dfastates[i].group = -1;
 		dfastates[i].states = NULL;
-		dfastates[i].accept = -1;
-		dfastates[i].acceptstr = NULL;
+		dfastates[i].accept = NULL;
 	}
 	/*
 	 * init first dfa state
@@ -45,14 +45,16 @@ static void init_dfas(struct nfa *sstate)
 	currentdfa = 0;
 }
 
-static int add_dfa(struct set *nfastates, char *accept)
+static int add_dfa(struct set *nfastates, struct accept *accept)
 {
 	if (ndfas >= MAX_DFAS)
 		errexit("dfas overflows");
+	if (!dfastates)
+		errexit("not init dfas");
 
-	if (nfastates && dfastates) {
+	if (nfastates) {
 		dfastates[ndfas].states = nfastates;
-		dfastates[ndfas].acceptstr = accept;
+		dfastates[ndfas].accept = dupaccept(accept);
 	}
 	return ndfas++;
 }
@@ -86,7 +88,7 @@ void subsetconstruct(int (*dfatable)[128], struct set *acceptset)
 	struct set *next;
 	int nextstate = 0;
 	int c, state;
-	char *accept;
+	struct accept *accept;
 
 	while (dfa = next_dfa()) {
 		for (c = 0; c < MAX_CHARS; c++) {
@@ -98,9 +100,10 @@ void subsetconstruct(int (*dfatable)[128], struct set *acceptset)
 				state = F;
 			/* transition from current to next */
 			else if ((state = in_dfa(next)) >= 0)
-				freeset(next);
+				freeset(next);	/* next is alloced by move()*/
 			else
 				state = add_dfa(next, accept);
+			/* real assign the dfatable: [0->ndfas][0->MAX_CHARS] */
 			dfatable[state_dfa(dfa)][c] = state;
 			/* NOTE: using state, not ndfas - 1 */
 			if (accept)
@@ -112,6 +115,11 @@ void subsetconstruct(int (*dfatable)[128], struct set *acceptset)
 /*
  * subset construction:
  * convert NFA directed graph to DFA table
+ *
+ * RETURN:
+ * 	@table        dfa state transtion table
+ * 	@acceptset    dfa acceptable state set
+ * 	return value  dfa state transtion table size
  */
 int construct_dfa(struct nfa *sstate, int (**table)[], struct set **acceptset)
 {
@@ -154,18 +162,31 @@ int construct_dfa(struct nfa *sstate, int (**table)[], struct set **acceptset)
 void traverse_dfatable(int (*dfatable)[128], int size, struct set *accept)
 {
 	int i, c;
-	printf("\n-====== debug dfa table ========-\n");
+	fprintf(stderr, "\n\n[==== DFA Transition Table ====]\n");
 	for (i = 0; i < size; i++) {
 		for (c = 0; c < MAX_CHARS; c++)
 			if (dfatable[i][c] >= 0)
-				printf("  %d --> %d on %c\n",
+				fprintf(stderr, "  %d --> %d on %c\n",
 					i, dfatable[i][c], c);
 			if (dfatable[i][c] >= size)
 				errexit("dfa table corrupt");
 	}
-	for_each_member(i, accept)
-		printf(" accept state:%d %s\n", i, dfastates[i].acceptstr);
-	printf("-====== end debug dfa table ====-\n");
+	/* check and output accept information */
+	for_each_member(i, accept) {
+		if (!dfastates[i].accept) {
+			fprintf(stderr, "dfastate[%d] has no accept", i);
+			exit(EXIT_FAILURE);
+		}
+
+		fprintf(stderr, " accept state:%d ", i);
+		if (dfastates[i].accept->anchor & AC_START)
+			fprintf(stderr, "^ ");	
+		fprintf(stderr,"%s", dfastates[i].accept->action);
+		if (dfastates[i].accept->anchor & AC_END)
+			fprintf(stderr, " $");	
+		fprintf(stderr, "\n");
+	}
+	fprintf(stderr, "[==== END DFA Transition Table ====]\n");
 }
 
 #ifdef DFA_TABLE_TEST

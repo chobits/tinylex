@@ -6,6 +6,7 @@
 #include <set.h>
 #include <nfa.h>
 #include <text.h>
+#include <lib.h>
 
 #ifdef DEBUG
 
@@ -30,7 +31,45 @@ do {\
 
 #endif /* DEBUG */
 
+/* accept auxiliary method */
+static char *emptyaction = "/* empty accept action */";
 
+struct accept *allocaccept(void)
+{
+	struct accept *acp;
+	acp = xmalloc(sizeof(*acp));
+	acp->action = NULL;
+	acp->anchor = AC_NONE;
+	return acp;
+}
+
+void assignaccept(struct accept *dst, struct accept *src)
+{
+	dst->action = src->action;
+	dst->anchor = src->anchor;
+}
+
+struct accept *dupaccept(struct accept *orig)
+{
+	struct accept *acp = NULL;
+	if (orig) {
+		acp = xmalloc(sizeof(*acp));
+		acp->action = orig->action;
+		acp->anchor = orig->anchor;
+	}
+	return acp;
+}
+
+void freeaccept(struct accept *acp)
+{
+	if (acp) {
+		if (acp->action && acp->action != emptyaction)
+			free(acp->action);
+		free(acp);
+	}
+}
+
+/* nfas buffer */
 int nfapos = 0;
 struct nfa *nfabuf = NULL;
 
@@ -42,7 +81,6 @@ struct nfa *nfastack[STACKNFAS];
 #define nfastackfull() (nfatop >= (STACKNFAS - 1))
 #define nfastackempty() (nfatop < 0)
 
-static char *emptyaction = "[<empty accept action>]";
 
 void init_nfa_buffer(void)
 {
@@ -56,8 +94,10 @@ void free_nfas(void)
 	struct nfa *n;
 	int i;
 	for (n = nfabuf, i = 0; i < nfapos; i++, n++)
-		if (n->accept && n->accept != emptyaction)
-			free(n->accept);
+		if (n->accept) {
+			freeaccept(n->accept);
+			n->accept = NULL;
+		}
 	free(nfabuf);
 }
 
@@ -66,8 +106,11 @@ void freenfa(struct nfa *n)
 	if (!nfastackfull()) {
 		nfastack[++nfatop] = n;
 		n->edge = EG_DEL;
-		if (n->accept && n->accept != emptyaction)
-			free(n->accept);
+		if (n->accept) {
+			freeaccept(n->accept);
+			/* set NULL, which cannot be free twice */
+			n->accept = NULL;
+		}
 	}
 	/* else-part just discard this nfa */
 }
@@ -96,12 +139,12 @@ struct nfa *allocnfa(void)
 		n = &nfabuf[nfapos++];
 	n->next[0] = NULL;
 	n->next[1] = NULL;
-	n->accept = NULL;
 	n->edge = EG_EPSILON;
-	n->anchor = 0;
+	n->accept = NULL;
 	return n;
 }
 
+/* token auxiliary method */
 static token_t current = NIL;
 
 /* the yytext is valid when match return 1 */
@@ -125,6 +168,7 @@ void matched(token_t type)
 		errexit("not matched");
 }
 
+/* real parse */
 /* Terminal Symbol */
 void terminal(struct nfa **start, struct nfa **end)
 {
@@ -328,8 +372,6 @@ void regor(struct nfa **start, struct nfa **end)
 	while (cc_first_set()) {
 		concatenation(&istart, &iend);
 		memcpy(*end, istart, sizeof(*istart));
-		/* free overlaping nfa */
-		istart->accept = NULL;
 		freenfa(istart);
 		/* update new end */
 		*end = iend;
@@ -389,8 +431,13 @@ void regexp(struct nfa **startp, struct nfa **endp)
 		end = end->next[0];
 		anchor |= AC_END;
 	}
-	/* why put anchor to last NFA? */
-	end->anchor = anchor;
+
+	end->accept = allocaccept();
+	/*
+	 * Why put anchor(^) to last NFA? 
+	 *  We can handle head newline stream at accept state!
+	 */
+	end->accept->anchor = anchor;
 	end->edge = EG_EMPTY;
 
 	/* set return value */
@@ -410,7 +457,7 @@ void action(struct nfa *end)
 	ENTER();
 	/* epsilon */
 	if (match(EOL) || match(_EOF)) {
-		end->accept = emptyaction;
+		end->accept->action = emptyaction;
 		advance();
 		return;
 	}
@@ -427,10 +474,10 @@ void action(struct nfa *end)
 		/* Should it happen? */
 		if (len <= 1)
 			errexit("error new line");
-		end->accept = strdup(line);
+		end->accept->action = strdup(line);
 		/* elimite tail newline */
-		if (end->accept[len - 1] == '\n')
-			end->accept[len - 1] = '\0';
+		if (end->accept->action[len - 1] == '\n')
+			end->accept->action[len - 1] = '\0';
 	}
 	LEAVE();
 }
@@ -515,10 +562,10 @@ struct nfa *machine(void)
 void printset(struct set *set)
 {
 	int i, bitnr;
-	printf("[%smaps]", set->compl ? "complemented " : "");
+	fprintf(stderr, "[%smaps]", set->compl ? "complemented " : "");
 	if (set->compl)
 		return;
-	printf("\n      ");
+	fprintf(stderr, "\n      ");
 	for (i = 0; i < set->ncells; i++) {
 		if (!set->map[i])
 			continue;
@@ -530,23 +577,27 @@ void printset(struct set *set)
 }
 
 /* output nfa::anchor */
-void printanchor(int anchor)
+void printaccept(struct accept *acp)
 {
-	switch (anchor) {
-	case AC_NONE:
-		printf("    ");
-		break;
-	case AC_START:
-		printf(" ^  ");
-		break;
-	case AC_END:
-		printf(" $  ");
-		break;
-	case AC_BOTH:
-		printf(" ^ $");
-		break;
-	default:
-		break;
+	if (acp) {
+		fprintf(stderr, "<accept> action:%s", acp->action);
+		switch (acp->anchor) {
+		case AC_NONE:
+			fprintf(stderr, "    ");
+			break;
+		case AC_START:
+			fprintf(stderr, " ^  ");
+			break;
+		case AC_END:
+			fprintf(stderr, " $  ");
+			break;
+		case AC_BOTH:
+			fprintf(stderr, " ^ $");
+			break;
+		default:
+			errexit("unknown accept anchor");
+			break;
+		}
 	}
 }
 
@@ -555,35 +606,34 @@ void printedge(struct nfa *nfa, struct nfa *pstart)
 {
 	if (nfa->next[0]) {
 		if (nfa->next[0]) {
-			printf("state: %4d --> %4d on ",
+			fprintf(stderr, "state: %4d --> %4d on ",
 					nfa - pstart,
 					nfa->next[0] - pstart);
 			if (nfa->edge > 0) {
-				printf("[%c]", nfa->edge);
+				fprintf(stderr, "[%c]", nfa->edge);
 			} else if (nfa->edge == EG_EPSILON) {
-				printf("[epsilon]");
+				fprintf(stderr, "[epsilon]");
 			} else if (nfa->edge == EG_CCL) {
 				printset(nfa->set);
 			}
 		}
 		/* another transimit */
 		if (nfa->next[1]) {
-			printf("\n           ");
-			printf("state: %4d --> %4d on ",
+			fprintf(stderr, "\n       ");
+			fprintf(stderr, "state: %4d --> %4d on ",
 					nfa - pstart,
 					nfa->next[1] - pstart);
 			if (nfa->edge > 0) {
-				printf("[%c]", nfa->edge);
+				fprintf(stderr, "[%c]", nfa->edge);
 			} else if (nfa->edge == EG_EPSILON) {
-				printf("[epsilon]");
+				fprintf(stderr, "[epsilon]");
 			} else if (nfa->edge == EG_CCL) {
 				printset(nfa->set);
 			}
 		}
 	} else {
-		if (nfa->edge == EG_EMPTY)
-			printf("(accept)");
-		else
+		/* accept nfa */
+		if (nfa->edge != EG_EMPTY)
 			errexit("nfa accept is not empty");
 	}
 }
@@ -597,23 +647,23 @@ void __traverse_nfa(struct nfa *pstart, int n, struct nfa *lstart)
 {
 	struct nfa *nfa;
 	int i;
-	printf("start state: %d\n", nfastate(lstart));
+	fprintf(stderr, "start state: %d\n", nfastate(lstart));
 	for (nfa = pstart, i = 0; i < n; i++, nfa++) {
 		/* skip lazy deleted one */
 		if (nfa->edge == EG_DEL)
 			continue;
-		printf("[%4d] ", i);
-		printanchor(nfa->anchor);
+		fprintf(stderr, "[%4d] ", i);
 		printedge(nfa, pstart);
-		printf("\n");
+		printaccept(nfa->accept);
+		fprintf(stderr, "\n");
 	}
 }
 
 void traverse_nfa(struct nfa *lstart)
 {
-	printf("\n[===   NFAS   ===]\n");
+	fprintf(stderr,  "\n[===   NFAS   ===]\n");
 	__traverse_nfa(nfabuf, nfapos, lstart);
-	printf("[=== NFAS end ===]\n");
+	fprintf(stderr,  "[=== NFAS end ===]\n");
 }
 
 #ifdef NFATEST
@@ -626,6 +676,8 @@ int main(int argc, char **argv)
 	init_nfa_buffer();
 	nfa = machine();
 	traverse_nfa(nfa);
+	free_nfas();
+	return 0;
 }
 
 #endif

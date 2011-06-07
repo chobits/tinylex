@@ -8,12 +8,9 @@
 #include <set.h>
 #include <text.h>
 
-static int part = 0;		/* current handing part */
+extern FILE *fout;
 
-int ispartend(char *line)
-{
-	return (line[0] == '%' && line[1] == '%') ? 1 : 0;
-}
+static int part = 0;		/* current handing part */
 
 void parse_errx(char *str)
 {
@@ -44,6 +41,8 @@ int parse_getline(char **linp)
  *  %{
  *  <body>
  *  }%
+ *
+ * + output c code header into lex.yy.c
  */
 void parse_cheader(void)
 {
@@ -63,7 +62,7 @@ void parse_cheader(void)
 				break;
 			/* C code header body */
 			/* FIXME: need a good interface */
-			printf("%s", line);
+			fprintf(fout, "%s", line);
 		}
 		if (!len)
 			parse_errx("no header end code: }% ");
@@ -136,15 +135,19 @@ void parse_regexp(void)
 	size = construct_dfa(nfa, &table, &accept);
 	traverse_dfatable(table, size, accept);
 
-	/* minimization */
+	/* minimization: accept will be freed */
 	minimize_dfa(table, accept, &minaccept);
 
 	/* minimize dfa table */
 	minsize = minimize_dfatable2(table, &mintable);
 	traverse_dfatable(mintable, minsize, minaccept);
-
+	/* Now we can free table, should we? */
+	free(table);
+	freeset(minaccept);
 	/* compress dfa table */
 	compress_dfatable(mintable, minsize, MAX_CHARS);
+	/* free mintable */
+	free(mintable);
 }
 
 void parse_ccode(void)
@@ -157,7 +160,7 @@ void parse_ccode(void)
 		text_getline(&line);
 	/* output part 3 */
 	while (len = text_getline(&line))
-		printf("%s", line);
+		fprintf(fout, "%s", line);
 }
 
 /*
@@ -180,6 +183,8 @@ void parse_script(void)
 	parse_macro();
 	/* part2: */
 	parse_regexp();
+	/* generate part code into lex.yy.c */
+	gen_part_code();
 	/* part3: */
 	parse_ccode();
 }

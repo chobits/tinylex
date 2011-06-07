@@ -25,3 +25,8 @@ int isspaceline(char *line)
 		line++;
 	return (*line) ? 0 : 1;
 }
+
+int ispartend(char *line)
+{
+	return (line[0] == '%' && line[1] == '%') ? 1 : 0;
+}
