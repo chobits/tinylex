@@ -5,6 +5,7 @@
 void complset(struct set *set)
 {
 	set->compl = ~(set->compl);
+	set->used = set->nbits - set->used;
 }
 
 /* alloc new set using default map */
@@ -32,9 +33,9 @@ struct set *allocset(int nbits)
 	struct set *set;
 	set = newset();
 	/* reset map */
-	if (CELLS_UP(nbits) > CELLS_UP(set->nbits)) {
-		set->nbits = nbits;
-		set->ncells = CELLS_UP(nbits);
+	if (CELLS_UP(nbits + 1) > CELLS_UP(set->nbits)) {
+		set->nbits = nbits + 1;
+		set->ncells = CELLS_UP(nbits + 1);
 		set->map = xmalloc(set->ncells);
 		memset(set->map, 0x0, set->ncells);
 	}
@@ -53,15 +54,14 @@ void freeset(struct set *set)
 
 void delset(struct set *set, int entry)
 {
-	if (entry > set->nbits)
+	if (entry >= set->nbits)
 		return;
 	if (set->map[CELLS(entry)] & (1 << CELL_BIT(entry))) {
-		if (!set->compl) {
+		if (!set->compl)
 			set->map[CELLS(entry)] &= ~(1 << CELL_BIT(entry));
-			set->used--;
-		}
 	} if (set->compl)
 		set->map[CELLS(entry)] |= 1 << CELL_BIT(entry);
+	set->used--;
 }
 
 /* duplicate @orignal set */
@@ -97,20 +97,25 @@ void copyset(struct set *old, struct set *new)
 
 /*
  * expand set map to CELLS_UP(entry) cells
+ * default expand twice
  */
-void expandset(struct set *set, int entry)
+void expandset(struct set *set, int bits)
 {
-	int n = CELLS_UP(entry);
-
+	int n;
+	bits *= 2;	/* twice */
+	n = CELLS_UP(bits);
 	set_cell_t *bak = set->map;
 
 	set->map = xmalloc(n);
 	/* backup original map */
 	memcpy(set->map, bak, set->ncells);
 	/* clear expanded map */
-	memset(set->map + set->ncells, 0x0, n - set->ncells);
+	if (set->compl)
+		memset(set->map + set->ncells, 0xff, n - set->ncells);
+	else
+		memset(set->map + set->ncells, 0x0, n - set->ncells);
 	set->ncells = n;
-	set->nbits = entry;
+	set->nbits = bits;
 	/* free original expanded map */
 	if (bak != set->defmap)
 		free(bak);
@@ -150,15 +155,16 @@ int memberofset(int member, struct set *set)
  */
 void addset(struct set *set, int entry)
 {
-	if (CELLS_UP(entry) > CELLS_UP(set->nbits))
-		expandset(set, entry);
+	/* NOTE: + 1 because entry start from 0 */
+	if (CELLS_UP(entry + 1) > CELLS_UP(set->nbits))
+		expandset(set, entry + 1);
 	if (!(set->map[CELLS(entry)] & (1 << CELL_BIT(entry)))) {
 		if(!set->compl) {
 			set->used++;
 			set->map[CELLS(entry)] |= (1 << CELL_BIT(entry));
 		}
 	} else if (set->compl) {
-		set->used--;
+		set->used++;
 		set->map[CELLS(entry)] &= ~(1 << CELL_BIT(entry));
 	}
 }
@@ -179,8 +185,8 @@ int test_add_set(struct set *set, int entry)
 	if (!set)
 		return -1;
 
-	if (CELLS_UP(entry) > CELLS_UP(set->nbits))
-		expandset(set, entry);
+	if (CELLS_UP(entry + 1) > CELLS_UP(set->nbits))
+		expandset(set, entry + 1);
 
 	oldused = set->used;
 
@@ -190,7 +196,7 @@ int test_add_set(struct set *set, int entry)
 			set->map[CELLS(entry)] |= (1 << CELL_BIT(entry));
 		}
 	} else if (set->compl) {
-		set->used--;
+		set->used++;
 		set->map[CELLS(entry)] &= ~(1 << CELL_BIT(entry));
 	}
 
@@ -263,12 +269,12 @@ void startmember(struct set *set)
 	set->member = member;
 }
 
-void outputmap(struct set *set)
+void outputmap(FILE *fp, struct set *set)
 {
 	int i;
 	for (i = 0; i < set->ncells; i++)
-		printf("%02x ", set->map[i]);
-	printf("\n");
+		fprintf(fp, "%02x ", set->map[i]);
+	fprintf(fp, "\n");
 }
 
 #ifdef SET_TEST
