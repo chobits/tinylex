@@ -10,7 +10,7 @@
 
 #define F	-1	/* fail transition on char */
 
-extern struct set *epsilon_closure(struct set *, char **, int);
+extern struct set *epsilon_closure(struct set *, struct accept **, int);
 extern struct set *move(struct set *, int state);
 
 typedef int ROW[MAX_CHARS];
@@ -18,11 +18,15 @@ typedef int ROW[MAX_CHARS];
 struct dfa {
 	struct set *states;	/* nfa states */
 	int group;		/* used for dfa minization */
-	int accept;
-	char *acceptstr;	/* accept action string */
+	struct accept *accept;	/* accept structure */
 };
 
+extern int ndfas;
+extern struct dfa *dfastates;
+
+extern int sgroup;
 extern int ngroups;
+
 extern void traverse_dfatable(int (*)[128], int, struct set *);
 extern int construct_dfa(struct nfa *, int (**)[], struct set **);
 

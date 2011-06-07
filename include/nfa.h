@@ -6,9 +6,8 @@
 #endif
 
 #include "set.h"
-#define dbg(fmt, arg...) fprintf(stderr, "%s "fmt"\n", __FUNCTION__, ##arg)
 
-#define MAXNFAS 512
+#define MAXNFAS 1024
 
 /* edge special state */
 #define EG_EPSILON	(-1)
@@ -17,17 +16,21 @@
 #define EG_DEL		(-4)	/* lazy deleted, in nfa stack */
 
 /* anchor flag */
-#define AC_NONE		(0)	/* ..... */
-#define AC_START	(1)	/* ^.... */
-#define AC_END		(2)	/* ....$ */
-#define AC_BOTH		(3)	/* ^...$ */
+#define AC_NONE		0	/* ..... */
+#define AC_START	1	/* ^.... */
+#define AC_END		2	/* ....$ */
+#define AC_BOTH		3	/* ^...$ */
+
+struct accept {
+	int anchor;
+	char *action;
+};
 
 struct nfa {
 	int edge;
-	int anchor;
 	struct set *set;	/* concatenation chars */
 	struct nfa *next[2];
-	char *accept;
+	struct accept *accept;
 };
 
 /* extern global parameter */
@@ -39,6 +42,7 @@ extern void __traverse_nfa(struct nfa *, int, struct nfa *);
 extern void traverse_nfa(struct nfa *);
 extern struct nfa *machine(void);
 
+extern struct accept *dupaccept(struct accept *orig);
 
 /* auxilary method */
 static inline int nfastate(struct nfa *nfa)

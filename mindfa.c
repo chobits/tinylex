@@ -69,7 +69,9 @@ int init_groups(void)
 		groups[0] = NULL;
 		sgroup = 1;
 	}
+#ifdef DEBUG
 	debug_group();
+#endif
 }
 
 /* compute dfastates[dfatable[dfa][c]].group */

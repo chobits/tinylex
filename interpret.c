@@ -7,7 +7,7 @@
 
 #define MAXSTACKNFAS 128
 
-#define RECURSION_EPSILON_CLOSURE
+//#define RECURSION_EPSILON_CLOSURE
 #ifdef RECURSION_EPSILON_CLOSURE
 
 /*  real recursion computation function */
@@ -99,7 +99,7 @@ struct set *epsilon_closure(struct set *input, struct accept **acp, int dup)
 	int i;
 
 	/* init accpet */
-	if (accept)
+	if (acp)
 		*acp = NULL;
 
 	if (!input)
@@ -240,7 +240,7 @@ int grep(char *line, struct nfa *nfa, char **endstr)
 	return 0;
 }
 
-
+extern FILE *fout;
 /* egrep-like test program */
 int main(int argc, char **argv)
 {
@@ -248,17 +248,44 @@ int main(int argc, char **argv)
 	char *lp, *ep;
 	FILE *f;
 	struct nfa *nfa;
+/*
+struct accept *accept;
+struct set *start, *end;
+int i;
+*/
+
 	/* handle arguments */
 	if (argc != 3)
 		usage();
+
 	/* init token stream: interpreting regular expression */
 	open_script(argv[1]);
+	fout = fopen("/dev/null", "w");
+	if (!fout)
+		errexit("fopen");
 	parse_cheader();
 	parse_macro();
 	/* construct NFA from regular expression */
 	parse_prepare_regexp();
 	init_nfa_buffer();
 	nfa = machine();
+
+/*debug*/
+/*
+start = newset();
+addset(start, nfastate(nfa));
+start = epsilon_closure(start, &accept, 0);
+if (accept)
+	errexit("axa");
+end = move(start, '#');
+
+if (!end)
+	errexit("# error");
+else
+	printf("################ is right");
+
+exit(0);
+*/
 
 	/* init file stream */
 	f = fopen(argv[2], "r");

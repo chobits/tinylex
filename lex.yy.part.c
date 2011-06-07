@@ -222,6 +222,9 @@ int yylex(void)
 			if (yylastaccept)
 				yynstate = YYF;
 			else {
+				/*
+				 * FIXME: some tailing chars will be ignored!
+				 */
 				yytext = "";
 				yyleng = 0;
 				return 0;
@@ -239,6 +242,7 @@ int yylex(void)
 
 			/* handle ^ , $ operator */
 			if (yyanchor & YY_AC_START)
+				/* FIXME: '\n' is ignored */
 				yy_move_start();
 
 			if (yyanchor & YY_AC_END) {

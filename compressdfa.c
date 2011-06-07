@@ -171,7 +171,6 @@ void redundant_compress(int (*table)[MAX_CHARS])
 
 	/* build compressed table */
 	com_table = xmalloc(com_rows * com_cols * sizeof(int));
-	printf("compress table: %d * %d\n", com_rows, com_cols);
 	col = 0;
 	for_each_member(i, col_set) {
 		row = 0;
@@ -190,8 +189,10 @@ void redundant_compress(int (*table)[MAX_CHARS])
 		errexit("error rows or cols of redundant compressed table");
 
 	printf("\n");
+#ifdef DEBUG
 	redundant_compress_debug((int *)table, nrows, ncols,
 				com_table, com_rows, com_cols, row_map, col_map);
+#endif
 }
 
 void compress_dfatable(int (*table)[MAX_CHARS], int row, int col)

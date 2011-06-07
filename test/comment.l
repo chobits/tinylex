@@ -1,0 +1,2 @@
+%%
+"/*"[^*]*[^/]*"*/"	/* comment regular expression */

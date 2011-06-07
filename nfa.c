@@ -571,7 +571,7 @@ void printset(struct set *set)
 			continue;
 		for (bitnr = 0; bitnr < 8; bitnr++) {
 			if ((1 << bitnr) & set->map[i])
-				putchar(BIT_CELL(i, bitnr));
+				fputc(BIT_CELL(i, bitnr), stderr);
 		}
 	}
 }

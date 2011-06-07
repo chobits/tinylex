@@ -51,21 +51,20 @@ void parse_cheader(void)
 
 	/* set current part */
 	part = 1;
-
 	len = parse_getline(&line);
 	/* ignore other chars of `%{` or `}%` line */
 	/* start code: `%{` */
 	if (line[0] == '%' && line[1] == '{') {
 		while (len = text_getline(&line)) {
 			/* end code: `}%` */
-			if (line[0] == '}' && line[1] == '%')
+			if (line[0] == '%' && line[1] == '}')
 				break;
 			/* C code header body */
 			/* FIXME: need a good interface */
 			fprintf(fout, "%s", line);
 		}
 		if (!len)
-			parse_errx("no header end code: }% ");
+			parse_errx("no header end code: %} ");
 	} else if (ispartend(line)) {
 		/* `%%` means part end, which skip macro definition phase */
 		part = 2;
@@ -129,18 +128,22 @@ void parse_regexp(void)
         /* real parse */
 	init_nfa_buffer();
         nfa = machine();
+#ifdef DEBUG
 	traverse_nfa(nfa);
-
+#endif
 	/* construct dfa table */
 	size = construct_dfa(nfa, &table, &accept);
+#ifdef DEBUG
 	traverse_dfatable(table, size, accept);
-
+#endif
 	/* minimization: accept will be freed */
 	minimize_dfa(table, accept, &minaccept);
 
 	/* minimize dfa table */
 	minsize = minimize_dfatable2(table, &mintable);
+#ifdef DEBUG
 	traverse_dfatable(mintable, minsize, minaccept);
+#endif
 	/* Now we can free table, should we? */
 	free(table);
 	freeset(minaccept);

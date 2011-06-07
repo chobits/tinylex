@@ -15,7 +15,16 @@ void version(void)
 void usage(void)
 {
 	fprintf(stderr,
-		"USAGE: tinylex script [-o outputfile]\n");
+		"USAGE: tinylex script [OPTIONS]\n"
+		"OPTIONS:\n"
+		"      -o file         output code file\n"
+		"      -p file         use file instead default lex.yy.part.c\n"
+		"      -h              help information\n"
+		"      -v              vertion information\n"
+		"e.g:\n"
+		"  tinylex test/colour.l -o colour.c\n"
+		"\n"
+		);
 	exit(EXIT_FAILURE);
 }
 
@@ -25,8 +34,9 @@ void parse_args(int argc, char **argv)
 	char opt;
 	if (argc < 2)
 		usage();
+
 	opterr = 0;
-	while ((opt = getopt(argc, argv, "o:hv")) != -1) {
+	while ((opt = getopt(argc, argv, "o:p:hv")) != -1) {
 		switch (opt) {
 		case 'o':
 			if (codefile)
@@ -38,6 +48,9 @@ void parse_args(int argc, char **argv)
 			break;
 		case 'v':
 			version();
+			break;
+		case 'p':
+			lexpart = optarg;
 			break;
 		default:
 			usage();

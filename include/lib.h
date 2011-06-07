@@ -9,5 +9,10 @@ extern void errexit(char *str);
 extern void *xmalloc(size_t size);
 extern int isspaceline(char *line);
 
+#ifdef DEBUG
 #define dbg(fmt, arg...) fprintf(stderr, "%s "fmt"\n", __FUNCTION__, ##arg)
+#else
+#define dbg(fmt, arg...)
+#endif
+
 #endif	/* lib.h */

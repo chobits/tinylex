@@ -141,6 +141,7 @@ void add_macro(char *line, int len)
 	
 	/* add it to hash table */
 	add_macro_table(macro);
+
 	dbg("add macro hash:%8x name:%s text:%s",
 			macro->hash, macro->name, macro->text);
 }

@@ -20,6 +20,7 @@ static void free_dfas(void)
 
 static void init_dfas(struct nfa *sstate)
 {
+	struct accept *acp;
 	struct set *first;
 	int i;
 	/* alloc dfa buffer */
@@ -37,9 +38,10 @@ static void init_dfas(struct nfa *sstate)
 	 */
 	first = newset();
 	addset(first, nfastate(sstate));
-	epsilon_closure(first, NULL, 0);
+	epsilon_closure(first, &acp, 0);
+	if (acp)
+		errexit("first nfa is accepted");
 	dfastates[0].states = first;
-
 	/* some internal parmaters */
 	ndfas = 1;
 	currentdfa = 0;
@@ -162,6 +164,7 @@ int construct_dfa(struct nfa *sstate, int (**table)[], struct set **acceptset)
 void traverse_dfatable(int (*dfatable)[128], int size, struct set *accept)
 {
 	int i, c;
+	printf("\n");
 	fprintf(stderr, "\n\n[==== DFA Transition Table ====]\n");
 	for (i = 0; i < size; i++) {
 		for (c = 0; c < MAX_CHARS; c++)

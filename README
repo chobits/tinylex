@@ -1,5 +1,54 @@
-What is tinylex?
- A tiny lexical analyser generator
++ What is tinylex?
+   A tiny lexical analyser generator
 
-How to implement?
- I just refer to Allen Holub's book 'Compiler design in C'.
+
++ How to implement?
+   I refer to Allen Holub's book 'Compiler design in C'
+    and write it by myself.
+
+
++ Format of the input file:
+
+  %{
+    < code block for definition or macro >
+  %}
+    < Macro Definition: macroname macrotext     >
+    < e.g:              digit     [0-9]         >
+    < recursive macro definition is not allowed.>
+  %%
+    < Rules: regularexp  action string          >
+    < e.g:   {digit}+    printf("%d", yytext);  >
+    < only onle-line action string is allowed.  >
+  %%
+    < code block for main function >
+
+
+
++ Usage:
+  compile:
+    # make
+      [generate tinylex and egrep_like ]
+
+  test:
+    # make test
+      [see the output information]
+
+  debug:
+    # make debug  
+      [generate many debug programes, such as nfa]
+    # ./nfa test/common_test.l
+      [output NFAS information according to
+       common_test.l script (regular expresion for testing) ]
+
++ TODO:
+   1. bugfix:
+      see `grep -C 2 -n FIXME *.c`
+   2. make tinylex compatible with flex/lex.
+      (Tinylex is only subset of flex/lex now.
+       And many aulixilary functions or flags in lex.yy.c do not exist,
+       such as yywrap/yymore/yyrestart)
+   3. support multi-line accept action string
+      (Maybe I need a internal C parser.)
+
++ Author:
+   Xiaochen Wang <wangxiaochen0@gmail.com>
