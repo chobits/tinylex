@@ -18,7 +18,7 @@ digit [0-9]
 %%
 
 "case"|"default"|"switch"|"typeof"|"sizeof"|"return"|"if"|"else"|"while"|"break"|"continue"|"do"|"until" printf(yellow(%s), yytext);
-"FILE"|"char"|"static"|"void"|"int"|"short"|"unsigned"|"float"|"double"|"struct" printf(green(%s), yytext);
+"ssize_t"|"size_t"|"FILE"|"char"|"static"|"void"|"int"|"short"|"unsigned"|"float"|"double"|"struct" printf(green(%s), yytext);
 {digit}+		printf(red(%s), yytext);	/* digit */
 "/*"[^*]*[^/]*"*/"	printf(navyblue(%s), yytext);	/* comment */
 "#".*			printf(purple(%s), yytext);	/* macro */
