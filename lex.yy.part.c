@@ -211,7 +211,7 @@ int yylex(void)
 	yy_unterm();
 	yystate = 0;
 	yyanchor = 0;
-	yylastaccept = 0;
+	yylastaccept = -1;	/* NOTE: first state(0) can be acceptted */
 	yy_mark_start();
 
 	while (1) {
@@ -219,7 +219,7 @@ int yylex(void)
 		yylook = yy_lookahead();
 
 		if (yylook == EOF) {
-			if (yylastaccept)
+			if (yylastaccept >= 0)
 				yynstate = YYF;
 			else {
 				/*
@@ -235,7 +235,7 @@ int yylex(void)
 		/* dbg("%d -> %d on [%c]", yystate, yynstate, yylook); */
 
 		if (yynstate == YYF) {
-			if (yylastaccept)
+			if (yylastaccept >= 0)
 				yy_mark_pos();
 			else
 				yy_advance();
@@ -265,7 +265,7 @@ int yylex(void)
 
 			yy_unterm();
 			yystate = 0;
-			yylastaccept = 0;
+			yylastaccept = -1;
 			yyanchor = 0;
 			yy_mark_start();
 		} else {
