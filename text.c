@@ -170,11 +170,14 @@ int text_prevline(char **linp)
 		if (text_prev_lineno == text_lineno + 1) {
 			/* default save for error output */
 			text_save_pos(TEXT_LINE);
+			/* return value */
+			if (linp)
+				*linp = text_pos;
+			len = text_prev_linetail - text_pos;
 			/* get prev line */
 			text_pos = text_prev_linetail;
 			text_lineno++;
 			text_term(text_pos);
-			len = text_prev_linetail - text_pos;
 		}
 		text_prev_linetail = NULL;
 	}
