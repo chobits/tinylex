@@ -40,7 +40,20 @@ struct accept *allocaccept(void)
 	acp = xmalloc(sizeof(*acp));
 	acp->action = NULL;
 	acp->anchor = AC_NONE;
+	acp->user = 0;
 	return acp;
+}
+
+struct accept *getaccept(struct accept *orig)
+{
+	if (orig)
+		orig->user++;
+	return orig;
+}
+
+struct accept *getnewaccept(void)
+{
+	return getaccept(allocaccept());
 }
 
 void assignaccept(struct accept *dst, struct accept *src)
@@ -54,19 +67,27 @@ struct accept *dupaccept(struct accept *orig)
 	struct accept *acp = NULL;
 	if (orig) {
 		acp = xmalloc(sizeof(*acp));
-		acp->action = orig->action;
+		if (orig->action && orig->action != emptyaction)
+			acp->action = strdup(orig->action);
+		else
+			acp->action = orig->action;
 		acp->anchor = orig->anchor;
+		acp->user = 1;
 	}
 	return acp;
 }
 
+void __freeaccept(struct accept *acp)
+{
+	if (acp->action && acp->action != emptyaction)
+		free(acp->action);
+	free(acp);
+}
+
 void freeaccept(struct accept *acp)
 {
-	if (acp) {
-		if (acp->action && acp->action != emptyaction)
-			free(acp->action);
-		free(acp);
-	}
+	if (acp && --acp->user == 0)
+		__freeaccept(acp);
 }
 
 /* nfas buffer */
@@ -432,9 +453,9 @@ void regexp(struct nfa **startp, struct nfa **endp)
 		anchor |= AC_END;
 	}
 
-	end->accept = allocaccept();
+	end->accept = getnewaccept();
 	/*
-	 * Why put anchor(^) to last NFA? 
+	 * Why put anchor(^) to last NFA?
 	 *  We can handle head newline stream at accept state!
 	 */
 	end->accept->anchor = anchor;
