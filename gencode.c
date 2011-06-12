@@ -21,7 +21,7 @@ void print_accept_action(FILE *fp)
 				"\t\t\tcase %d:\n"
 				"\t\t\t\t%s\n"
 				"\t\t\t\tbreak;\n",
-				i, dfastates[i].accept->action);
+				i - sgroup, dfastates[i].accept->action);
 }
 
 /* print yyaccept[] anchor table */
@@ -30,9 +30,8 @@ void print_accept_array(FILE *fp)
 	int i;
 	char *yy_acp;
 	fprintf(fp, "static int yyaccept[%d] = {\n", ngroups - sgroup);
-	for (i = 0; i < sgroup; i++)
-		fprintf(fp, "\tYY_NOAC,\n");
-	for (; i < ngroups; i++) {
+	/* NOTE: accept table starts from sgroup */
+	for (i = sgroup; i < ngroups; i++) {
 		if (dfastates[i].accept) {
 			switch (dfastates[i].accept->anchor) {
 			case AC_NONE:

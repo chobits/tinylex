@@ -145,11 +145,19 @@ void reset_accept(struct set *accept, struct set **ap)
 		/* new accept set */
 		addset(new, dfa->group);
 	}
-
+	/* check */
+	for (i = 0; i < ndfas; i++)
+		if (dfastates[i].accept)
+			errexit("reset accept state error");
 	/* restore saved accept */
 	for (i = 0; i < top; i++) {
-		dfastates[accept_stack[i].group].accept =
+		/* reduplicate accept dfa? */
+		if (dfastates[accept_stack[i].group].accept) {
+			freeaccept(accept_stack[i].accept);
+		} else {
+			dfastates[accept_stack[i].group].accept =
 					accept_stack[i].accept;
+		}
 	}
 
 	if (ap)
@@ -190,24 +198,29 @@ int minimize_dfatable(int (*table)[128], int (**ret)[128])
 	/* alloc new minimized table */
 	t = xmalloc(MAX_CHARS * (ngroups - sgroup) * sizeof(int));
 
+	group = newset();
 	/*
 	 * loop hierarchy:
 	 *   DFAS --> Groups --> Chars
 	 */
 	for (dfa = 0; dfa < ndfas; dfa++) {
 		/*
-		 * FIXME: Different dfa can make the same g!
+		 * FIXED: Different dfa can make the same g!
 		 *        How to reduce the same g times?
+		 * use group to detect whether group g has been handled!
 		 */
 		g = dfastates[dfa].group;
+		if (memberofset(g, group))
+			continue;
+		addset(group, g);
 #ifdef DEBUG_MIN_TABLE
 		times++;
 #endif
 		for (c = 0; c < MAX_CHARS; c++)
 			if (table[dfa][c] == F)
-				t[g][c] = F;
+				t[g - sgroup][c] = F;
 			else
-				t[g][c] = dfastates[table[dfa][c]].group;
+				t[g - sgroup][c] = dfastates[table[dfa][c]].group - sgroup;
 	}
 	/* set return table */
 	if (ret)
@@ -232,6 +245,8 @@ int minimize_dfatable2(int (*table)[128], int (**ret)[128])
 	/*
 	 * loop hierarchy:
 	 *   Groups --> DFAs --> Chars
+	 *
+	 * NOTE: new table row start from 0, not sgroup
 	 */
 	for (g = sgroup; g < ngroups; g++) {
 		startmember(groups[g]);
@@ -241,9 +256,9 @@ int minimize_dfatable2(int (*table)[128], int (**ret)[128])
 #endif
 			for (c = 0; c < MAX_CHARS; c++)
 				if (table[dfa][c] == F)
-					t[g][c] = F;
+					t[g - sgroup][c] = F;
 				else
-					t[g][c] = dfastates[table[dfa][c]].group;
+					t[g - sgroup][c] = dfastates[table[dfa][c]].group - sgroup;
 			/* only one table */
 		} else {
 			errexit("Group is empty!");
@@ -261,15 +276,18 @@ void debug_group(void)
 {
 	int i, g, n;
 	fprintf(stderr, "\n-------debug group-----------\n");
+	fprintf(stderr, "\n[dfas]\n");
 	for (i = 0; i < ndfas; i++) {
 		g = dfastates[i].group;
+		if (g == -1)
+			continue;
 		fprintf(stderr, "dfa %d group %d ", i, g);
 		if (dfastates[i].accept)
 			fprintf(stderr, "accept %s\n", dfastates[i].accept->action);
 		else
 			fprintf(stderr, "no accept\n");
 	}
-	fprintf(stderr, "\n[groups]\n");
+	fprintf(stderr, "[groups]\n");
 	for (g = sgroup; g < ngroups; g++) {
 		fprintf(stderr, "group:%d dfas:", g);
 		for_each_member(n, groups[g])

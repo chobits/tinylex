@@ -24,6 +24,7 @@
 struct accept {
 	int anchor;
 	char *action;
+	int user;
 };
 
 struct nfa {
@@ -43,6 +44,7 @@ extern void traverse_nfa(struct nfa *);
 extern struct nfa *machine(void);
 
 extern struct accept *dupaccept(struct accept *orig);
+extern struct accept *getaccept(struct accept *orig);
 
 /* auxilary method */
 static inline int nfastate(struct nfa *nfa)

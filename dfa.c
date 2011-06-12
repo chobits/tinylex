@@ -10,15 +10,27 @@ static int currentdfa;
 int ndfas;
 struct dfa *dfastates = NULL;
 
+void free_dfa(struct dfa *dfa)
+{
+	if (dfa->states) {
+		freeset(dfa->states);
+		dfa->states = NULL;
+	}
+	if (dfa->accept) {
+		freeaccept(dfa->accept);
+		dfa->accept = NULL;
+	}
+}
+
 static void free_dfas(void)
 {
 	int i;
 	for (i = 0; i < ndfas; i++)
-		freeset(dfastates[i].states);
+		free_dfa(&dfastates[i]);
 	free(dfastates);
 }
 
-static void init_dfas(struct nfa *sstate)
+static void init_dfas(struct nfa *sstate, struct set *accept)
 {
 	struct accept *acp;
 	struct set *first;
@@ -31,16 +43,15 @@ static void init_dfas(struct nfa *sstate)
 		dfastates[i].states = NULL;
 		dfastates[i].accept = NULL;
 	}
-	/*
-	 * init first dfa state
-	 * NOTE: First NFA cannot be accepted, 
-	 *       so epsilon_closure second parameter is set NULL 
-	 */
+	/* init first dfa state */
 	first = newset();
 	addset(first, nfastate(sstate));
 	epsilon_closure(first, &acp, 0);
-	if (acp)
-		errexit("first nfa is accepted");
+	/* NOTE: first dfa can be accepted, such as regexp: `.*` */
+	if (acp) {
+		dfastates[ndfas].accept = getaccept(acp);
+		addset(accept, 0);
+	}
 	dfastates[0].states = first;
 	/* some internal parmaters */
 	ndfas = 1;
@@ -56,7 +67,7 @@ static int add_dfa(struct set *nfastates, struct accept *accept)
 
 	if (nfastates) {
 		dfastates[ndfas].states = nfastates;
-		dfastates[ndfas].accept = dupaccept(accept);
+		dfastates[ndfas].accept = getaccept(accept);
 	}
 	return ndfas++;
 }
@@ -140,7 +151,7 @@ int construct_dfa(struct nfa *sstate, int (**table)[], struct set **acceptset)
 	 * init internal dfa auxiliary method,
 	 *  which is used in subsetconstruct()
 	 */
-	init_dfas(sstate);
+	init_dfas(sstate, accept);
 
 	/* subset construction */
 	subsetconstruct(dfatable, accept);
@@ -183,10 +194,10 @@ void traverse_dfatable(int (*dfatable)[128], int size, struct set *accept)
 
 		fprintf(stderr, " accept state:%d ", i);
 		if (dfastates[i].accept->anchor & AC_START)
-			fprintf(stderr, "^ ");	
+			fprintf(stderr, "^ ");
 		fprintf(stderr,"%s", dfastates[i].accept->action);
 		if (dfastates[i].accept->anchor & AC_END)
-			fprintf(stderr, " $");	
+			fprintf(stderr, " $");
 		fprintf(stderr, "\n");
 	}
 	fprintf(stderr, "[==== END DFA Transition Table ====]\n");
