@@ -190,7 +190,10 @@ void yy_unterm(void)
 !accept
 
 #define YYF		(-1)
+
+#ifndef ECHO
 #define ECHO()	fprintf(yyout, "%s", yytext)
+#endif
 
 int yylex(void)
 {
