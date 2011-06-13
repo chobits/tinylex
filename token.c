@@ -5,6 +5,7 @@
 #include <token.h>
 #include <text.h>
 #include <macro.h>
+#include <lib.h>
 
 char *yytext = NULL;
 int yyleng = 0;
@@ -45,6 +46,42 @@ int token_getchar(void)
 		mark_start();	/* remark */
 	}
 	return text_getchar();
+}
+
+static int back_token_inescape = 0;
+/* handle `\realchar` */
+int token_getrealchar(void)
+{
+	int realchar, c;
+	/* remark start position */
+	mark_start();
+	/* get real char */
+	realchar = token_getchar();
+	/* handle special char */
+	switch (realchar) {
+	case 'n':
+		c = '\n';
+		break;
+	case 't':
+		c = '\t';
+		break;
+	case '\\':
+		c = '\\';
+		break;
+	defalut:
+		/* we ignore escape characher for other char */
+		c = realchar;
+		break;
+	}
+	/* for back_token() */
+	back_token_inescape = 1;
+	/*
+	 * Reset real char!
+	 * Should we restore its original char?
+	 * We will restore it in back_token().
+	 */
+	*yytext = c;
+	return c;
 }
 
 /* expand {macro} */
@@ -134,14 +171,28 @@ restart:
 	}
 
 	type = L;
-	if (c == EOF)
-		type = _EOF;
-	else
-		type = tokenmap[c];
-	mark_end();
-	if (inquota)
-		type = L;
+	/*
+	 * if we back token(escape char) last,
+	 * we should take care here!
+	 */
+	if (back_token_inescape == 1) {
+		/* token_getrealchar -> (now)get_token */
+		back_token_inescape = 0;
+	} else if (back_token_inescape == 2) {
+		/* token_getrealchar -> back_token -> (now)get_token */
+		back_token_inescape = 1;
+		goto end;
+	}
 
+	if (!inquota) {
+		/* hansle escape character \ */
+		if (c == '\\')
+			c = token_getrealchar();
+		else
+			type = (c == EOF) ? _EOF : tokenmap[c];
+	}
+end:
+	mark_end();
 	return type;
 }
 
@@ -151,4 +202,7 @@ void back_token(void)
 		macropos--;
 	else
 		text_backchar();
+	/* backed token is escape char, e.g `\n` */
+	if (back_token_inescape == 1)
+		back_token_inescape = 2;
 }
