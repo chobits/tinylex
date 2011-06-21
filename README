@@ -23,7 +23,6 @@
     < code block for main function >
 
 
-
 + Usage:
   compile:
     # make
@@ -40,15 +39,18 @@
       [output NFAS information according to
        common_test.l script (regular expresion for testing) ]
 
+
 + TODO:
    1. bugfix:
-      see `grep -C 2 -n FIXME *.c`
+      using `grep -C 2 -n FIXME *.c` to get bug information
    2. make tinylex compatible with flex/lex.
       (Tinylex is only subset of flex/lex now.
-       And many aulixilary functions or flags in lex.yy.c do not exist,
+       And many auxiliary functions or flags aren't supported,
        such as yywrap/yymore/yyrestart)
    3. support multi-line accept action string
       (Maybe I need a internal C parser.)
+   4. support recursive macro definition
+
 
 + Author:
    Xiaochen Wang <wangxiaochen0@gmail.com>
