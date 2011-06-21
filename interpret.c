@@ -180,7 +180,7 @@ void printstateset(struct set *set)
 
 void usage(void)
 {
-	fprintf(stderr, "egrep_like regexpfile file\n");
+	fprintf(stderr, "USAGE: egrep_like regexpfile file\n");
 	exit(EXIT_FAILURE);
 }
 
@@ -248,11 +248,6 @@ int main(int argc, char **argv)
 	char *lp, *ep;
 	FILE *f;
 	struct nfa *nfa;
-/*
-struct accept *accept;
-struct set *start, *end;
-int i;
-*/
 
 	/* handle arguments */
 	if (argc != 3)
@@ -269,23 +264,6 @@ int i;
 	parse_prepare_regexp();
 	init_nfa_buffer();
 	nfa = machine();
-
-/*debug*/
-/*
-start = newset();
-addset(start, nfastate(nfa));
-start = epsilon_closure(start, &accept, 0);
-if (accept)
-	errexit("axa");
-end = move(start, '#');
-
-if (!end)
-	errexit("# error");
-else
-	printf("################ is right");
-
-exit(0);
-*/
 
 	/* init file stream */
 	f = fopen(argv[2], "r");
