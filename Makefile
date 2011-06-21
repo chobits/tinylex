@@ -2,7 +2,7 @@ MAKEFLAGS += --no-print-directory
 
 OBJS	= tinylex nfa egrep_like dfatable set mindfa text nfa tinylex_debug
 CC	= gcc
-CLFAGS	= -Iinclude
+CFLAGS	= -Iinclude
 
 all:tinylex egrep_like
 
@@ -26,10 +26,10 @@ TLOBJS	= $(GREPOBJS) main.c
 #final program: tinylex
 #
 tinylex:$(TLOBJS)
-	$(CC) $(CLFAGS) $^ -o $@
+	$(CC) $(CFLAGS) $^ -o $@
 
 egrep_like:$(GREPOBJS)
-	$(CC) $(CLFAGS) -DINTERPRET $^ -o $@
+	$(CC) $(CFLAGS) -DINTERPRET $^ -o $@
 
 
 #
@@ -38,29 +38,29 @@ egrep_like:$(GREPOBJS)
 #
 debug:tinylex_debug set text nfa dfatable mindfa
 tinylex_debug:$(TLOBJS)
-	$(CC) $(CLFAGS) -DDEBUG -DDEBUG_MIN_TABLE $^ -o $@
+	$(CC) $(CFLAGS) -DDEBUG -DDEBUG_MIN_TABLE $^ -o $@
 	@echo "Run command: ./$@ test/colour.l -o colour.c"
 	@echo "            gcc colour.c -o colour"
 	@echo "            ./colour lib.c"
 	@echo
 mindfa:mindfa.c dfa.c interpret.c nfa.c token.c lib.c set.c text.c macro.c
-	$(CC) $(CLFAGS) -DDEBUG -DDEBUG_MIN_TABLE -DMIN_DFA_TEST $^ -o $@
+	$(CC) $(CFLAGS) -DDEBUG -DDEBUG_MIN_TABLE -DMIN_DFA_TEST $^ -o $@
 	@echo "Run command: ./$@ test/common_test.l"
 	@echo
 dfatable:dfa.c interpret.c nfa.c token.c lib.c set.c text.c macro.c
-	$(CC) $(CLFAGS) -DDEBUG -DDFA_TABLE_TEST $^ -o $@
+	$(CC) $(CFLAGS) -DDEBUG -DDFA_TABLE_TEST $^ -o $@
 	@echo "Run command: ./$@ test/common_test.l"
 	@echo
 nfa:nfa.c token.c lib.c set.c text.c macro.c
-	$(CC) $(CLFAGS) -DDEBUG -DNFATEST $^ -o $@
+	$(CC) $(CFLAGS) -DDEBUG -DNFATEST $^ -o $@
 	@echo "Run command: ./$@ test/common_test.l"
 	@echo
 set:set.c lib.c
-	$(CC) $(CLFAGS) -DSET_TEST $^ -o $@
+	$(CC) $(CFLAGS) -DSET_TEST $^ -o $@
 	@echo "Run command: ./$@"
 	@echo
 text:text.c lib.c
-	$(CC) $(CLFAGS) -DLEX_TEXT_TEST $^ -o $@
+	$(CC) $(CFLAGS) -DLEX_TEXT_TEST $^ -o $@
 	@echo "Run command: ./$@ file"
 	@echo
 
