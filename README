@@ -18,7 +18,7 @@
   %%
     < Rules: regularexp  action string          >
     < e.g:   {digit}+    printf("%d", yytext);  >
-    < only onle-line action string is allowed.  >
+    < only one-line action string is allowed.   >
   %%
     < code block for main function >
 
