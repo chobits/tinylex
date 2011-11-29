@@ -7,7 +7,8 @@
     and write it by myself.
 
 
-+ Format of the input file:
++ Format of the input file
+  (see test/colour.l for example, which is a C syntax higlighter):
 
   %{
     < code block for definition or macro >
@@ -27,6 +28,7 @@
   compile:
     # make
       [generate tinylex and egrep_like ]
+    # ./tinylex -p lex.yy.part.c {source script}.l -o {generated ouput}.c
 
   test:
     # make test
